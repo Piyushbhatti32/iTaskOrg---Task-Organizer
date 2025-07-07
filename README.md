@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# iTaskOrg - Task Organizer
+
+A modern, feature-rich task management application built with Next.js and Tailwind CSS.
+
+## Features
+
+- 📝 **Task Management**
+  - Create, edit, and delete tasks
+  - Add subtasks and track completion
+  - Set priorities and due dates
+  - Organize tasks in groups
+
+- 📅 **Calendar View**
+  - Monthly calendar view
+  - Task visualization by date
+  - Easy navigation and task scheduling
+
+- ⏱️ **Pomodoro Timer**
+  - Customizable focus sessions
+  - Short and long break intervals
+  - Session tracking and statistics
+
+- 📋 **Templates**
+  - Create reusable task templates
+  - Quick task creation from templates
+  - Template management
+
+- 👥 **Team Collaboration**
+  - Create and manage groups
+  - Assign tasks to team members
+  - Track team progress
+
+- 📊 **Statistics**
+  - Task completion metrics
+  - Productivity insights
+  - Time tracking analytics
+
+- ⚙️ **Customization**
+  - Light/Dark theme
+  - Notification preferences
+  - Timer settings
+  - Profile management
 
 ## Getting Started
 
-First, run the development server:
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/itaskorg.git
+   cd itaskorg
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Tech Stack
+
+- **Framework**: Next.js 14
+- **Styling**: Tailwind CSS
+- **State Management**: Zustand
+- **Date Handling**: date-fns
+- **UI Components**: Custom components with Tailwind
+
+## Project Structure
+
+```
+itaskorg/
+├── src/
+│   ├── app/                 # Next.js app router pages
+│   ├── components/          # Reusable UI components
+│   ├── store/              # Zustand store and state management
+│   └── styles/             # Global styles and Tailwind config
+├── public/                 # Static assets
+└── docs/                   # Documentation
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Contributing
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Development
 
-## Learn More
+See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development guidelines and best practices.
 
-To learn more about Next.js, take a look at the following resources:
+## Changelog
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+See [CHANGELOG.md](CHANGELOG.md) for a list of changes and version history.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
