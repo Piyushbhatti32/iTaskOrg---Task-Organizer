@@ -2,17 +2,18 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useStore } from '../../store';
 import Image from 'next/image';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Login form component
 function LoginForm({ onSubmit, isLoading }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit({ email, password });
+    onSubmit(email, password, rememberMe);
   };
 
   return (
@@ -39,12 +40,21 @@ function LoginForm({ onSubmit, isLoading }) {
       </div>
       <div className="flex items-center justify-between">
         <label className="flex items-center">
-          <input type="checkbox" className="mr-2" />
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            className="mr-2"
+          />
           <span className="text-sm">Remember me</span>
         </label>
-        <a href="#" className="text-sm text-blue-600 hover:underline">
+        <button
+          type="button"
+          onClick={() => onSubmit(email, null, false, true)}
+          className="text-sm text-blue-600 hover:underline"
+        >
           Forgot password?
-        </a>
+        </button>
       </div>
       <button
         type="submit"
@@ -60,30 +70,32 @@ function LoginForm({ onSubmit, isLoading }) {
 }
 
 // Social login buttons component
-function SocialLogin({ onSocialLogin, isLoading }) {
+function SocialLogin({ onGoogleSignIn, onGithubSignIn, isLoading }) {
   return (
     <div className="space-y-3">
       <button
-        onClick={() => onSocialLogin('google')}
+        onClick={onGoogleSignIn}
         disabled={isLoading}
         className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 py-2 rounded hover:bg-gray-50"
       >
-        <img
+        <Image
           src="/google-icon.svg"
           alt="Google"
-          className="w-5 h-5"
+          width={20}
+          height={20}
         />
         Continue with Google
       </button>
       <button
-        onClick={() => onSocialLogin('github')}
+        onClick={onGithubSignIn}
         disabled={isLoading}
         className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white py-2 rounded hover:bg-gray-800"
       >
-        <img
+        <Image
           src="/github-icon.svg"
           alt="GitHub"
-          className="w-5 h-5"
+          width={20}
+          height={20}
         />
         Continue with GitHub
       </button>
@@ -93,7 +105,6 @@ function SocialLogin({ onSocialLogin, isLoading }) {
 
 // Registration form component
 function RegisterForm({ onSubmit, isLoading }) {
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -104,21 +115,11 @@ function RegisterForm({ onSubmit, isLoading }) {
       alert('Passwords do not match');
       return;
     }
-    onSubmit({ name, email, password });
+    onSubmit(email, password);
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium mb-1">Name</label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full border rounded px-3 py-2"
-          required
-        />
-      </div>
       <div>
         <label className="block text-sm font-medium mb-1">Email</label>
         <input
@@ -164,54 +165,53 @@ function RegisterForm({ onSubmit, isLoading }) {
 
 // Main Login page component
 export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [mode, setMode] = useState('login'); // 'login' or 'register'
+  const [mode, setMode] = useState('login');
+  const { login, signUp, googleSignIn, githubSignIn, resetPassword, error, loading, clearError } = useAuth();
   const router = useRouter();
-  const login = useStore(state => state.login);
 
-  const handleLogin = async (credentials) => {
-    setIsLoading(true);
+  const handleLogin = async (email, password, remember, isReset = false) => {
+    clearError();
     try {
-      // Mock login - replace with actual authentication
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      login(credentials);
+      if (isReset) {
+        await resetPassword(email);
+        alert('Password reset email sent. Please check your inbox.');
+        return;
+      }
+      await login(email, password, remember);
       router.push('/');
     } catch (error) {
       console.error('Login failed:', error);
-      alert('Login failed. Please try again.');
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const handleRegister = async (userData) => {
-    setIsLoading(true);
+  const handleRegister = async (email, password) => {
+    clearError();
     try {
-      // Mock registration - replace with actual registration
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // Automatically log in after registration
-      login(userData);
-      router.push('/');
+      await signUp(email, password);
+      alert('Account created successfully! Please verify your email before logging in.');
+      setMode('login');
     } catch (error) {
       console.error('Registration failed:', error);
-      alert('Registration failed. Please try again.');
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const handleSocialLogin = async (provider) => {
-    setIsLoading(true);
+  const handleGoogleSignIn = async () => {
+    clearError();
     try {
-      // Mock social login - replace with actual OAuth flow
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      login({ provider });
+      await googleSignIn();
       router.push('/');
     } catch (error) {
-      console.error('Social login failed:', error);
-      alert('Social login failed. Please try again.');
-    } finally {
-      setIsLoading(false);
+      console.error('Google sign in failed:', error);
+    }
+  };
+
+  const handleGithubSignIn = async () => {
+    clearError();
+    try {
+      await githubSignIn();
+      router.push('/');
+    } catch (error) {
+      console.error('GitHub sign in failed:', error);
     }
   };
 
@@ -226,6 +226,12 @@ export default function LoginPage() {
               : 'Create a new account'}
           </p>
         </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+            {error}
+          </div>
+        )}
 
         <div className="bg-white p-8 rounded-lg shadow">
           <div className="flex justify-center space-x-4 mb-6">
@@ -255,7 +261,7 @@ export default function LoginPage() {
             <>
               <LoginForm
                 onSubmit={handleLogin}
-                isLoading={isLoading}
+                isLoading={loading}
               />
               <div className="mt-6">
                 <div className="relative">
@@ -270,8 +276,9 @@ export default function LoginPage() {
                 </div>
                 <div className="mt-6">
                   <SocialLogin
-                    onSocialLogin={handleSocialLogin}
-                    isLoading={isLoading}
+                    onGoogleSignIn={handleGoogleSignIn}
+                    onGithubSignIn={handleGithubSignIn}
+                    isLoading={loading}
                   />
                 </div>
               </div>
@@ -279,7 +286,7 @@ export default function LoginPage() {
           ) : (
             <RegisterForm
               onSubmit={handleRegister}
-              isLoading={isLoading}
+              isLoading={loading}
             />
           )}
         </div>
@@ -295,4 +302,4 @@ export default function LoginPage() {
       </div>
     </div>
   );
-} 
+}
