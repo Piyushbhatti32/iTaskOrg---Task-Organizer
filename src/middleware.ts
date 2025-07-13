@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { auth } from './config/firebase'
 
 export async function middleware(request: NextRequest) {
   // Get the current pathname
@@ -14,18 +13,18 @@ export async function middleware(request: NextRequest) {
   const protectedRoutes = ['/tasks', '/calendar', '/stats', '/profile', '/settings']
   const isProtectedRoute = protectedRoutes.some(route => path.startsWith(route))
 
-  // Check if user is authenticated
-  const user = auth.currentUser
+  // Get the token from cookies
+  const token = request.cookies.get('auth-token')?.value
 
   // If it's a protected route and user is not authenticated,
   // redirect to login page
-  if (isProtectedRoute && !user) {
+  if (isProtectedRoute && !token) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
   // If user is authenticated and trying to access login/register pages,
   // redirect to home page
-  if (isPublicRoute && user) {
+  if (isPublicRoute && token) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 

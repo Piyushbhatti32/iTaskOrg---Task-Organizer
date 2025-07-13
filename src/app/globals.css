@@ -5,9 +5,6 @@
   --foreground: #171717;
 }
 
-
-
-
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -21,11 +18,59 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Base text colors for different backgrounds */
 .bg-white {
   background-color: #fff !important;
-  color: #000 !important;
+  color: #171717 !important;
 }
+
 .bg-black {
   background-color: #000 !important;
   color: #fff !important;
+}
+
+.bg-gray-50 {
+  background-color: #f9fafb !important;
+  color: #171717 !important;
+}
+
+.bg-gray-100 {
+  background-color: #f3f4f6 !important;
+  color: #171717 !important;
+}
+
+.bg-blue-600 {
+  background-color: #2563eb !important;
+  color: #fff !important;
+}
+
+.bg-red-500 {
+  background-color: #ef4444 !important;
+  color: #fff !important;
+}
+
+.bg-green-500 {
+  background-color: #22c55e !important;
+  color: #fff !important;
+}
+
+/* Text colors for different backgrounds */
+.text-gray-500 {
+  color: #6b7280 !important;
+}
+
+.text-gray-600 {
+  color: #4b5563 !important;
+}
+
+/* Override text colors when parent has dark background */
+.bg-black .text-gray-500,
+.bg-black .text-gray-600,
+.bg-blue-600 .text-gray-500,
+.bg-blue-600 .text-gray-600,
+.bg-red-500 .text-gray-500,
+.bg-red-500 .text-gray-600,
+.bg-green-500 .text-gray-500,
+.bg-green-500 .text-gray-600 {
+  color: #e5e7eb !important;
 }

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useCalendarTasks } from '../../store';
+import { useState, useMemo } from 'react';
+import { useStore } from '../../store';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay } from 'date-fns';
 
 // Calendar grid component showing month view
@@ -62,17 +62,17 @@ function CalendarGrid({ selectedDate, onSelectDate, tasks }) {
 
 // Task list component showing tasks for selected date
 function DayTasks({ date, tasks }) {
-  if (!Array.isArray(tasks)) {
-    tasks = [];
-  }
+  const toggleTaskCompletion = useStore(state => state.toggleTaskCompletion);
 
-  const dayTasks = tasks.filter(task => {
-    if (!task || !task.dueDate) return false;
-    const taskDate = new Date(task.dueDate);
-    return isSameDay(taskDate, date);
-  });
-
-  const toggleTaskCompletion = useCalendarTasks(state => state.toggleTaskCompletion);
+  const dayTasks = useMemo(() => {
+    if (!Array.isArray(tasks)) return [];
+    
+    return tasks.filter(task => {
+      if (!task || !task.dueDate) return false;
+      const taskDate = new Date(task.dueDate);
+      return isSameDay(taskDate, date);
+    });
+  }, [tasks, date]);
 
   return (
     <div className="mt-6">
@@ -107,10 +107,14 @@ function DayTasks({ date, tasks }) {
 // Main Calendar page component
 export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const tasks = useCalendarTasks(state => {
-    const tasks = state?.tasks;
+  
+  // Use the correct store hook and memoize the selector
+  const tasks = useStore(state => state.tasks);
+  
+  // Memoize the filtered tasks to prevent unnecessary re-renders
+  const safeTasks = useMemo(() => {
     return Array.isArray(tasks) ? tasks : [];
-  });
+  }, [tasks]);
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
@@ -121,9 +125,9 @@ export default function CalendarPage() {
       <CalendarGrid
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
-        tasks={tasks}
+        tasks={safeTasks}
       />
-      <DayTasks date={selectedDate} tasks={tasks} />
+      <DayTasks date={selectedDate} tasks={safeTasks} />
     </div>
   );
-} 
+}

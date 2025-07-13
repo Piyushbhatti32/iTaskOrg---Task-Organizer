@@ -1,132 +1,239 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
+import { createContext, useContext, useEffect, useState } from "react";
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
   onAuthStateChanged,
   GoogleAuthProvider,
-  signInWithPopup,
   GithubAuthProvider,
+  signInWithRedirect,
+  getRedirectResult,
   sendPasswordResetEmail,
-  sendEmailVerification,
-  browserLocalPersistence,
-  browserSessionPersistence
-} from 'firebase/auth';
-import { auth } from '../config/firebase';
+  setPersistence,
+  browserSessionPersistence,
+  browserLocalPersistence
+} from "firebase/auth";
+import { auth } from "../config/firebase";
+import { useStore } from "../store";
 
-const AuthContext = createContext({});
+const AuthContext = createContext();
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  return useContext(AuthContext);
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const updateProfile = useStore(state => state.updateProfile);
 
+  // Sync user profile data with store
+  const syncUserProfile = (user) => {
+    if (!user) return;
+
+    const profileData = {
+      name: user.displayName || '',
+      email: user.email || '',
+      joinDate: user.metadata.creationTime,
+      lastSignIn: user.metadata.lastSignInTime,
+      emailVerified: user.emailVerified,
+      providerId: user.providerData[0]?.providerId || 'email'
+    };
+
+    // Get current profile to check existing avatar
+    const currentProfile = useStore.getState().profile;
+    
+    // Only set photoURL as avatar if there's no existing avatar
+    if (!currentProfile.avatar && user.photoURL) {
+      profileData.avatar = user.photoURL;
+    } else if (currentProfile.avatar) {
+      profileData.avatar = currentProfile.avatar;
+    }
+
+    updateProfile(profileData);
+  };
+
+  // Handle auth state changes and redirect results
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    let unsubscribe;
+
+    const initAuth = async () => {
+      try {
+        // First, check for redirect result
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          setUser(result.user);
+          syncUserProfile(result.user);
+          // Set auth cookie
+          document.cookie = `auth-token=${await result.user.getIdToken()}; path=/`;
+        }
+
+        // Then set up auth state listener
+        unsubscribe = onAuthStateChanged(auth, async (user) => {
+          if (user) {
+            setUser(user);
+            syncUserProfile(user);
+            // Set auth cookie
+            document.cookie = `auth-token=${await user.getIdToken()}; path=/`;
+          } else {
+            setUser(null);
+            // Remove auth cookie
+            document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+          }
+          setLoading(false);
+        });
+      } catch (error) {
+        console.error("Auth initialization error:", error);
+        setError(error.message);
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [updateProfile]);
+
+  const login = async (email, password, remember = false) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Set persistence based on remember me
+      await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
+      
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      setUser(userCredential.user);
+      syncUserProfile(userCredential.user);
+      // Set auth cookie
+      document.cookie = `auth-token=${await userCredential.user.getIdToken()}; path=/`;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    } finally {
       setLoading(false);
-    });
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    auth.setPersistence(browserLocalPersistence);
-  }, []);
+    }
+  };
 
   const signUp = async (email, password) => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      setError(null);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await sendEmailVerification(userCredential.user);
-    } catch (err) {
-      let message = 'An error occurred during registration';
-      if (err.code === 'auth/email-already-in-use') {
-        message = 'This email is already registered';
-      } else if (err.code === 'auth/weak-password') {
-        message = 'Password should be at least 6 characters';
-      }
-      setError(message);
-      throw err;
-    }
-  };
-
-  const login = async (email, password, remember) => {
-    try {
-      setError(null);
-      if (typeof window !== 'undefined') {
-        await auth.setPersistence(remember ? browserLocalPersistence : browserSessionPersistence);
-      }
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-      let message = 'Invalid email or password';
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        message = 'Invalid email or password';
-      }
-      setError(message);
-      throw err;
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await signOut(auth);
-    } catch (err) {
-      setError('Failed to log out');
-      throw err;
+      setUser(userCredential.user);
+      syncUserProfile(userCredential.user);
+      // Set auth cookie
+      document.cookie = `auth-token=${await userCredential.user.getIdToken()}; path=/`;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   const googleSignIn = async () => {
+    setLoading(true);
+    setError(null);
+    
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-    } catch (err) {
-      setError('Failed to sign in with Google');
-      throw err;
+      provider.addScope('email');
+      provider.addScope('profile');
+      
+      // Use redirect instead of popup
+      await signInWithRedirect(auth, provider);
+      // Note: The result will be handled by getRedirectResult in useEffect
+    } catch (error) {
+      setError(error.message);
+      setLoading(false);
+      throw error;
     }
   };
 
   const githubSignIn = async () => {
+    setLoading(true);
+    setError(null);
+    
     try {
       const provider = new GithubAuthProvider();
-      await signInWithPopup(auth, provider);
-    } catch (err) {
-      setError('Failed to sign in with GitHub');
-      throw err;
+      provider.addScope('user:email');
+      
+      // Use redirect instead of popup
+      await signInWithRedirect(auth, provider);
+      // Note: The result will be handled by getRedirectResult in useEffect
+    } catch (error) {
+      setError(error.message);
+      setLoading(false);
+      throw error;
     }
   };
 
   const resetPassword = async (email) => {
+    setLoading(true);
+    setError(null);
+    
     try {
       await sendPasswordResetEmail(auth, email);
-    } catch (err) {
-      setError('Failed to send password reset email');
-      throw err;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
-  const clearError = () => setError(null);
+  const logout = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      await signOut(auth);
+      setUser(null);
+      // Reset profile in store
+      updateProfile({
+        name: '',
+        email: '',
+        avatar: '',
+        bio: '',
+        timezone: 'UTC'
+      });
+      // Remove auth cookie
+      document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearError = () => {
+    setError(null);
+  };
 
   const value = {
     user,
-    loading,
-    error,
-    signUp,
     login,
-    logout,
+    signUp,
     googleSignIn,
     githubSignIn,
     resetPassword,
-    clearError
+    logout,
+    error,
+    loading,
+    clearError,
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }
