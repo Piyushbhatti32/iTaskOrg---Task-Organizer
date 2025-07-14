@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   useGroups,
   useAddGroup,
@@ -9,6 +9,8 @@ import {
   useRemoveMember,
   useRemoveTaskFromGroup
 } from '../../store';
+import GroupCreateForm from '../../components/groups/GroupCreateForm';
+import GroupChat from '../../components/groups/GroupChat';
 
 // Group form component for adding/editing groups
 function GroupForm({ onSubmit, initialData = null }) {
@@ -164,6 +166,13 @@ export default function GroupsPage() {
   const deleteGroup = useDeleteGroup();
   const removeMember = useRemoveMember();
   const removeTaskFromGroup = useRemoveTaskFromGroup();
+  const [selectedGroupId, setSelectedGroupId] = useState(null);
+
+  // Refresh group list after creation
+  const handleGroupCreated = (groupData) => {
+    addGroup(groupData);
+    setSelectedGroupId(groupData.id); // Select the new group
+  };
 
   const handleSubmit = (groupData) => {
     if (editingGroup) {
@@ -174,29 +183,64 @@ export default function GroupsPage() {
     }
   };
 
-  return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">Groups</h1>
-      
-      <GroupForm
-        onSubmit={handleSubmit}
-        initialData={editingGroup}
-      />
+  // Default to first group if none selected
+  useEffect(() => {
+    if (!selectedGroupId && groups.length > 0) {
+      setSelectedGroupId(groups[0].id);
+    }
+  }, [groups, selectedGroupId]);
 
-      <div className="space-y-6">
+  return (
+    <div className="max-w-4xl mx-auto py-10 px-4">
+      <h1 className="text-4xl font-extrabold mb-8 text-gradient bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent drop-shadow-lg">Groups</h1>
+
+      {/* Group Creation Form */}
+      <div className="mb-8">
+        <GroupCreateForm onGroupCreated={handleGroupCreated} />
+      </div>
+
+      {/* Existing Group Form for editing (hidden by default) */}
+      {editingGroup && (
+        <GroupForm
+          onSubmit={handleSubmit}
+          initialData={editingGroup}
+        />
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
         {groups.length === 0 ? (
-          <p className="text-center text-gray-500">No groups yet. Create one above!</p>
+          <div className="col-span-2 text-center text-gray-400 bg-white/70 rounded-2xl shadow-lg p-8 border border-white/20">
+            No groups yet. Create one above!
+          </div>
         ) : (
           groups.map(group => (
-            <GroupCard
+            <div
               key={group.id}
-              group={group}
-              onEdit={setEditingGroup}
-              onDelete={deleteGroup}
-              onRemoveMember={removeMember}
-              onRemoveTask={removeTaskFromGroup}
-            />
+              className={
+                `cursor-pointer rounded-2xl border-2 p-2 transition-all duration-200 shadow-lg hover:shadow-xl hover:border-blue-400 ${selectedGroupId === group.id ? 'border-blue-600 bg-gradient-to-br from-blue-50 to-purple-50' : 'border-transparent bg-white/80'}`
+              }
+              onClick={() => setSelectedGroupId(group.id)}
+            >
+              <GroupCard
+                group={group}
+                onEdit={setEditingGroup}
+                onDelete={deleteGroup}
+                onRemoveMember={removeMember}
+                onRemoveTask={removeTaskFromGroup}
+              />
+            </div>
           ))
+        )}
+      </div>
+
+      {/* Group Chat Window */}
+      <div className="mt-12">
+        {selectedGroupId ? (
+          <div className="rounded-2xl shadow-2xl border border-blue-100 bg-white/90 p-0 md:p-4">
+            <GroupChat groupId={selectedGroupId} />
+          </div>
+        ) : (
+          <div className="text-center text-gray-400">Select a group to start chatting.</div>
         )}
       </div>
     </div>

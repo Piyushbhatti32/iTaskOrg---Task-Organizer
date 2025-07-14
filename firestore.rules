@@ -6,56 +6,120 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
     function isEmailVerified() {
       return request.auth.token.email_verified;
     }
     
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isTeamMember(teamId) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid));
+    }
+    
+    function isTeamLeader(teamId) {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)).data.role == 'leader';
+    }
+    
+    function isGroupMember(groupId) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+    }
+    
+    function isGroupAdmin(groupId) {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isTaskParticipant(taskData) {
+      return isAuthenticated() && (
+        request.auth.uid == taskData.createdBy ||
+        request.auth.uid == taskData.assignedTo ||
+        (taskData.teamId != null && isTeamMember(taskData.teamId)) ||
+        (taskData.groupId != null && isGroupMember(taskData.groupId))
+      );
+    }
+
     // Users collection
     match /users/{userId} {
-      allow read: if isAuthenticated() && isOwner(userId);
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isOwner(userId);
       allow update: if isAuthenticated() && isOwner(userId);
       allow delete: if false; // Prevent user deletion through client
-      
-      // User's tasks subcollection
-      match /tasks/{taskId} {
-        allow read: if isAuthenticated() && isOwner(userId);
-        allow write: if isAuthenticated() && isOwner(userId);
-      }
-      
-      // User's categories subcollection
-      match /categories/{categoryId} {
-        allow read: if isAuthenticated() && isOwner(userId);
-        allow write: if isAuthenticated() && isOwner(userId);
-      }
+    }
+    
+    // Tasks collection
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated() && isTaskParticipant(resource.data);
+      allow create: if isAuthenticated() && isEmailVerified();
+      allow update: if isAuthenticated() && isTaskParticipant(resource.data);
+      allow delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.createdBy ||
+        (resource.data.teamId != null && isTeamLeader(resource.data.teamId)) ||
+        (resource.data.groupId != null && isGroupAdmin(resource.data.groupId))
+      );
     }
     
     // Teams collection
     match /teams/{teamId} {
-      allow read: if isAuthenticated() && (
-        resource.data.members[request.auth.uid] != null
-      );
+      allow read: if isTeamMember(teamId);
       allow create: if isAuthenticated() && isEmailVerified();
-      allow update: if isAuthenticated() && (
-        resource.data.owners[request.auth.uid] != null
-      );
-      allow delete: if isAuthenticated() && (
-        resource.data.owners[request.auth.uid] != null
-      );
+      allow update: if isTeamLeader(teamId);
+      allow delete: if isTeamLeader(teamId);
+      
+      // Team members subcollection
+      match /members/{memberId} {
+        allow read: if isTeamMember(teamId);
+        allow write: if isTeamLeader(teamId);
+      }
       
       // Team tasks subcollection
       match /tasks/{taskId} {
-        allow read: if isAuthenticated() && (
-          get(/databases/$(database)/documents/teams/$(teamId)).data.members[request.auth.uid] != null
-        );
-        allow write: if isAuthenticated() && (
-          get(/databases/$(database)/documents/teams/$(teamId)).data.members[request.auth.uid] != null
-        );
+        allow read: if isTeamMember(teamId);
+        allow create: if isTeamLeader(teamId);
+        allow update: if isTeamLeader(teamId) || (isTeamMember(teamId) && request.auth.uid == resource.data.assignedTo);
+        allow delete: if isTeamLeader(teamId);
       }
+    }
+    
+    // Groups collection
+    match /groups/{groupId} {
+      allow read: if isGroupMember(groupId);
+      allow create: if isAuthenticated() && isEmailVerified();
+      allow update: if isGroupAdmin(groupId);
+      allow delete: if isGroupAdmin(groupId);
+      
+      // Group members subcollection
+      match /members/{memberId} {
+        allow read: if isGroupMember(groupId);
+        allow write: if isGroupAdmin(groupId);
+      }
+    }
+    
+    // Messages collection
+    match /messages/{messageId} {
+      allow read: if isAuthenticated() && (
+        (resource.data.teamId != null && isTeamMember(resource.data.teamId)) ||
+        (resource.data.groupId != null && isGroupMember(resource.data.groupId))
+      );
+      allow create: if isAuthenticated() && isEmailVerified();
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.createdBy;
+      allow delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.createdBy ||
+        (resource.data.teamId != null && isTeamLeader(resource.data.teamId)) ||
+        (resource.data.groupId != null && isGroupAdmin(resource.data.groupId))
+      );
+    }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
     }
     
     // Global settings/templates (read-only for authenticated users)

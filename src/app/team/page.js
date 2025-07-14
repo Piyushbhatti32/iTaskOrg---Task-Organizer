@@ -8,6 +8,10 @@ import {
   useDeleteMember,
   useUnassignTask
 } from '../../store';
+import TeamCreateForm from '../../components/team/TeamCreateForm';
+import TaskAssignForm from '../../components/team/TaskAssignForm';
+import TaskResponseForm from '../../components/team/TaskResponseForm';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Member form component for adding/editing team members
 function MemberForm({ onSubmit, initialData = null }) {
@@ -174,6 +178,26 @@ export default function TeamPage() {
   const updateMember = useUpdateMember();
   const deleteMember = useDeleteMember();
   const unassignTask = useUnassignTask();
+  const { user } = useAuth();
+
+  // Optionally handle team creation (e.g., refresh members or show a toast)
+  const handleTeamCreated = (teamData) => {
+    // You could fetch members for the new team or show a notification
+    // For now, just log the created team
+    console.log('Team created:', teamData);
+  };
+
+  // Optionally handle task assignment (e.g., refresh tasks or show a toast)
+  const handleTaskAssigned = (taskData) => {
+    // You could refresh tasks or show a notification
+    console.log('Task assigned:', taskData);
+  };
+
+  // Optionally handle task response (e.g., refresh tasks or show a toast)
+  const handleTaskResponded = (responseData) => {
+    // You could refresh tasks or show a notification
+    console.log('Task response:', responseData);
+  };
 
   const handleSubmit = (memberData) => {
     if (editingMember) {
@@ -184,30 +208,76 @@ export default function TeamPage() {
     }
   };
 
-  return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">Team</h1>
-      
-      <MemberForm
-        onSubmit={handleSubmit}
-        initialData={editingMember}
-      />
+  // For demo, use a static teamId (in a real app, get from context or route)
+  const teamId = 'demo-team-id';
+  const currentUserId = user?.uid || 'demo-user-id';
 
-      <div className="space-y-6">
+  // Get current member object for the logged-in user
+  const currentMember = members.find(m => m.id === currentUserId);
+
+  return (
+    <div className="max-w-4xl mx-auto py-10 px-4">
+      <h1 className="text-4xl font-extrabold mb-8 text-gradient bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent drop-shadow-lg">Team</h1>
+
+      {/* Team Creation Form */}
+      <div className="mb-8">
+        <TeamCreateForm onTeamCreated={handleTeamCreated} />
+      </div>
+
+      <div className="mb-8">
+        <MemberForm
+          onSubmit={handleSubmit}
+          initialData={editingMember}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
         {members.length === 0 ? (
-          <p className="text-center text-gray-500">No team members yet. Add someone above!</p>
+          <div className="col-span-2 text-center text-gray-400 bg-white/70 rounded-2xl shadow-lg p-8 border border-white/20">
+            No team members yet. Add someone above!
+          </div>
         ) : (
           members.map(member => (
-            <MemberCard
+            <div
               key={member.id}
-              member={member}
-              onEdit={setEditingMember}
-              onDelete={deleteMember}
-              onUnassignTask={unassignTask}
-            />
+              className="rounded-2xl border-2 p-2 transition-all duration-200 shadow-lg hover:shadow-xl hover:border-blue-400 border-transparent bg-white/80"
+            >
+              <MemberCard
+                member={member}
+                onEdit={setEditingMember}
+                onDelete={deleteMember}
+                onUnassignTask={unassignTask}
+              />
+            </div>
           ))
         )}
       </div>
+
+      {/* Task Assignment Form (show only if there are members) */}
+      {members.length > 0 && (
+        <div className="mb-12">
+          <TaskAssignForm teamId={teamId} members={members} onTaskAssigned={handleTaskAssigned} />
+        </div>
+      )}
+
+      {/* Task Response Interface for current user */}
+      {currentMember && currentMember.tasks && currentMember.tasks.length > 0 && (
+        <div className="mt-12">
+          <h2 className="text-2xl font-semibold mb-4 text-blue-700">Your Assigned Tasks</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {currentMember.tasks.filter(task => task.status === 'pending').map(task => (
+              <div key={task.id} className="rounded-2xl shadow-lg border border-blue-100 bg-white/90 p-0 md:p-4">
+                <TaskResponseForm
+                  teamId={teamId}
+                  task={task}
+                  memberId={currentUserId}
+                  onResponded={handleTaskResponded}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
