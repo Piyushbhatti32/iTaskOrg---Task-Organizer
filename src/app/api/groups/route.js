@@ -8,7 +8,7 @@ import { createGroup, getGroup, updateGroup, deleteGroup } from '@/utils/db';
  */
 export async function POST(request) {
   try {
-    const { name, description } = await request.json();
+    const { name, description, members = [] } = await request.json();
     const authHeader = request.headers.get('Authorization');
     
     if (!authHeader?.startsWith('Bearer ')) {
@@ -28,16 +28,33 @@ export async function POST(request) {
     const userId = decodedToken.uid;
     
     // Create group with creator as admin
+    const groupMembers = {
+      [userId]: {
+        role: 'admin',
+        joinedAt: new Date().toISOString()
+      }
+    };
+    
+    // Add invited members
+    members.forEach(member => {
+      // Use email as key if no ID is provided, or generate a unique key
+      const memberKey = member.id && member.id !== userId ? member.id : `email_${member.email}`;
+      if (memberKey !== userId) { // Don't add creator twice
+        groupMembers[memberKey] = {
+          email: member.email,
+          name: member.name,
+          role: member.role || 'member',
+          joinedAt: new Date().toISOString(),
+          invitedBy: userId
+        };
+      }
+    });
+    
     const groupData = {
       name,
       description,
       createdBy: userId,
-      members: {
-        [userId]: {
-          role: 'admin',
-          joinedAt: new Date().toISOString()
-        }
-      },
+      members: groupMembers,
       settings: {
         isPrivate: false,
         allowMemberInvites: true

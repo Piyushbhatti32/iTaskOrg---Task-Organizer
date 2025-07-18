@@ -88,6 +88,7 @@ export const useStore = create(
               time: taskData.schedule?.time || null,
               reminder: taskData.schedule?.reminder || false
             },
+            assignedUsers: Array.isArray(taskData.assignedUsers) ? taskData.assignedUsers : [],
             completed: false,
             createdAt: new Date().toISOString(),
             completedAt: null,
@@ -118,7 +119,11 @@ export const useStore = create(
 
       toggleTaskCompletion: (taskId) => set((state) => ({
         tasks: state.tasks.map((task) =>
-          task.id === taskId ? { ...task, completed: !task.completed } : task
+          task.id === taskId ? { 
+            ...task, 
+            completed: !task.completed,
+            completedAt: !task.completed ? new Date().toISOString() : null
+          } : task
         )
       })),
 

@@ -152,7 +152,7 @@ export default function GroupCard({ group }) {
               Leave Group
             </h3>
             <p className="mt-2 text-sm text-gray-600">
-              Are you sure you want to leave this group? You'll need to be invited back to rejoin.
+              Are you sure you want to leave this group? You&apos;ll need to be invited back to rejoin.
             </p>
             <div className="mt-4 flex justify-end space-x-3">
               <button

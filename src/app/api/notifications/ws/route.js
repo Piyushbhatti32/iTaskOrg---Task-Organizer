@@ -1,92 +1,88 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/config/firebase';
-import { 
-  collection,
-  query,
-  where,
-  onSnapshot,
-  orderBy,
-  limit
-} from 'firebase/firestore';
 
-// Map to store WebSocket connections by user ID
-const connections = new Map();
+// Simple REST API for notifications
+// In production, consider using Socket.IO or similar for real-time features
 
-// Helper function to send notification to a specific user
-function sendNotification(userId, notification) {
-  const connection = connections.get(userId);
-  if (connection) {
-    connection.send(JSON.stringify(notification));
-  }
-}
+// Mock notifications store (in production, use a real database)
+const notificationsStore = new Map();
 
-// WebSocket connection handler
-export function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get('userId');
-
-  if (!userId) {
-    return new Response('User ID is required', { status: 400 });
-  }
-
-  // Upgrade the HTTP connection to WebSocket
-  if (request.headers.get('upgrade') !== 'websocket') {
-    return new Response('Expected WebSocket connection', { status: 426 });
-  }
-
+// Get notifications for a user
+export async function GET(request) {
   try {
-    const { socket, response } = Deno.upgradeWebSocket(request);
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+    const status = searchParams.get('status') || 'unread';
+    
+    if (!userId) {
+      return new Response('User ID is required', { status: 400 });
+    }
 
-    // Store the connection
-    connections.set(userId, socket);
+    // Get user's notifications
+    const userNotifications = notificationsStore.get(userId) || [];
+    const filteredNotifications = userNotifications.filter(n => n.status === status);
 
-    // Set up Firestore listener for user's notifications
-    const notificationsRef = collection(db, 'notifications');
-    const q = query(
-      notificationsRef,
-      where('userId', '==', userId),
-      where('status', '==', 'unread'),
-      orderBy('createdAt', 'desc'),
-      limit(50)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          const notification = {
-            id: change.doc.id,
-            ...change.doc.data()
-          };
-          sendNotification(userId, notification);
-        }
-      });
-    });
-
-    // Handle WebSocket events
-    socket.onopen = () => {
-      console.log(`WebSocket connection opened for user ${userId}`);
-    };
-
-    socket.onclose = () => {
-      console.log(`WebSocket connection closed for user ${userId}`);
-      connections.delete(userId);
-      unsubscribe();
-    };
-
-    socket.onerror = (error) => {
-      console.error(`WebSocket error for user ${userId}:`, error);
-    };
-
-    return response;
+    return NextResponse.json({ notifications: filteredNotifications });
   } catch (error) {
-    console.error('Error setting up WebSocket:', error);
-    return new Response('Failed to set up WebSocket connection', { status: 500 });
+    console.error('Error fetching notifications:', error);
+    return new Response('Failed to fetch notifications', { status: 500 });
   }
 }
 
-// Helper function to broadcast notification to multiple users
-export function broadcastNotification(userIds, notification) {
-  userIds.forEach(userId => {
-    sendNotification(userId, notification);
-  });
-} 
+// Create a new notification
+export async function POST(request) {
+  try {
+    const { userId, type, title, message, data } = await request.json();
+    
+    if (!userId || !type || !title) {
+      return new Response('Missing required fields', { status: 400 });
+    }
+
+    const notification = {
+      id: Date.now().toString(),
+      userId,
+      type,
+      title,
+      message: message || '',
+      data: data || {},
+      status: 'unread',
+      createdAt: new Date().toISOString()
+    };
+
+    // Store notification
+    if (!notificationsStore.has(userId)) {
+      notificationsStore.set(userId, []);
+    }
+    notificationsStore.get(userId).push(notification);
+
+    return NextResponse.json({ success: true, notification });
+  } catch (error) {
+    console.error('Error creating notification:', error);
+    return new Response('Failed to create notification', { status: 500 });
+  }
+}
+
+// Update notification status
+export async function PUT(request) {
+  try {
+    const { notificationId, userId, status } = await request.json();
+    
+    if (!notificationId || !userId || !status) {
+      return new Response('Missing required fields', { status: 400 });
+    }
+
+    const userNotifications = notificationsStore.get(userId) || [];
+    const notificationIndex = userNotifications.findIndex(n => n.id === notificationId);
+    
+    if (notificationIndex === -1) {
+      return new Response('Notification not found', { status: 404 });
+    }
+
+    userNotifications[notificationIndex].status = status;
+    notificationsStore.set(userId, userNotifications);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error updating notification:', error);
+    return new Response('Failed to update notification', { status: 500 });
+  }
+}

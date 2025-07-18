@@ -18,6 +18,7 @@ import {
 } from "firebase/auth";
 import { auth } from "../config/firebase";
 import { useStore } from "../store";
+import { createOrUpdateUserProfile } from "../utils/db";
 
 const AuthContext = createContext();
 
@@ -106,6 +107,24 @@ export function AuthProvider({ children }) {
             setUser(result.user);
             syncUserProfile(result.user);
             await setAuthCookie(result.user, true); // Set cookie with remember me for OAuth
+            
+            // Create or update user profile in Firestore
+            try {
+              await createOrUpdateUserProfile(result.user.uid, {
+                email: result.user.email,
+                displayName: result.user.displayName,
+                name: result.user.displayName,
+                photoURL: result.user.photoURL,
+                avatar: result.user.photoURL,
+                emailVerified: result.user.emailVerified,
+                providerId: result.user.providerData[0]?.providerId || 'email',
+                lastSignIn: new Date(),
+                isActive: true
+              });
+              console.log('User profile created/updated in Firestore from redirect');
+            } catch (error) {
+              console.error('Error creating/updating user profile from redirect:', error);
+            }
           }
         } catch (redirectError) {
           console.error('Error handling redirect result:', redirectError);
@@ -120,6 +139,24 @@ export function AuthProvider({ children }) {
             setUser(user);
             syncUserProfile(user);
             await setAuthCookie(user);
+            
+            // Create or update user profile in Firestore
+            try {
+              await createOrUpdateUserProfile(user.uid, {
+                email: user.email,
+                displayName: user.displayName,
+                name: user.displayName,
+                photoURL: user.photoURL,
+                avatar: user.photoURL,
+                emailVerified: user.emailVerified,
+                providerId: user.providerData[0]?.providerId || 'email',
+                lastSignIn: new Date(),
+                isActive: true
+              });
+              console.log('User profile created/updated in Firestore');
+            } catch (error) {
+              console.error('Error creating/updating user profile:', error);
+            }
           } else {
             setUser(null);
             await setAuthCookie(null);

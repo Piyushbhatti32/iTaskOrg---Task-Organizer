@@ -6,6 +6,7 @@ import {
   getDoc, 
   getDocs, 
   addDoc, 
+  setDoc, 
   updateDoc, 
   deleteDoc, 
   query,
@@ -21,9 +22,7 @@ function validateTeamData(data) {
     errors.push('Team name is required');
   }
   
-  if (!data.description?.trim()) {
-    errors.push('Team description is required');
-  }
+  // Description is optional, so we don't validate it as required
   
   return errors;
 }
@@ -76,7 +75,6 @@ export async function POST(request) {
       name,
       description,
       leaderId,
-      members: [leaderId], // Leader is automatically a member
       tasks: [],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -84,6 +82,14 @@ export async function POST(request) {
 
     const teamsRef = collection(db, 'teams');
     const docRef = await addDoc(teamsRef, teamData);
+
+    // Add the leader as a member in the members subcollection
+    const memberRef = doc(db, 'teams', docRef.id, 'members', leaderId);
+    await setDoc(memberRef, {
+      userId: leaderId,
+      role: 'leader',
+      joinedAt: serverTimestamp()
+    });
 
     return NextResponse.json({
       id: docRef.id,

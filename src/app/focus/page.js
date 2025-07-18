@@ -2,12 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { useStore, useUpdateTask, useUncompletedTasks } from '../../store';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // Timer display component showing minutes and seconds
 function TimerDisplay({ timeLeft, isBreak, isRunning }) {
+  const { theme, accentColor } = useTheme();
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
   const percentage = ((timeLeft / (isBreak ? (timeLeft >= 15 * 60 ? 15 * 60 : 5 * 60) : 25 * 60)) * 100).toFixed(1);
+  
+  const progressColor = isBreak ? '#10B981' : `var(--accent-${accentColor})`;
   
   return (
     <div className="relative w-72 h-72 mx-auto mb-8">
@@ -22,7 +26,7 @@ function TimerDisplay({ timeLeft, isBreak, isRunning }) {
           cy="50"
           r="45"
           fill="none"
-          stroke="#F3F4F6"
+          stroke="var(--border-color)"
           strokeWidth="2"
           className="transition-all duration-200"
         />
@@ -31,9 +35,10 @@ function TimerDisplay({ timeLeft, isBreak, isRunning }) {
           cy="50"
           r="45"
           fill="none"
-          stroke="#E5E7EB"
+          stroke="var(--border-color)"
           strokeWidth="4"
           className="transition-all duration-200"
+          opacity="0.5"
         />
         {/* Progress circle */}
         <circle
@@ -41,7 +46,7 @@ function TimerDisplay({ timeLeft, isBreak, isRunning }) {
           cy="50"
           r="45"
           fill="none"
-          stroke={isBreak ? '#10B981' : '#3B82F6'}
+          stroke={progressColor}
           strokeWidth="4"
           strokeLinecap="round"
           strokeDasharray="282.743"
@@ -49,18 +54,18 @@ function TimerDisplay({ timeLeft, isBreak, isRunning }) {
           className="transition-all duration-1000"
           transform="rotate(-90 50 50)"
           style={{
-            filter: `drop-shadow(0 0 8px ${isBreak ? '#10B981' : '#3B82F6'})`
+            filter: `drop-shadow(0 0 8px ${progressColor})`
           }}
         />
       </svg>
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center w-full">
-        <div className="text-7xl font-bold bg-gradient-to-r from-gray-700 to-gray-900 bg-clip-text text-transparent font-mono tracking-tight">
+        <div className="text-7xl font-bold font-mono tracking-tight" style={{ color: 'var(--text-primary)' }}>
       {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
         </div>
-        <div className="text-sm font-medium text-gray-500 mt-2">
+        <div className="text-sm font-medium mt-2" style={{ color: 'var(--text-secondary)' }}>
           {percentage}% remaining
         </div>
-        <div className="text-xs text-gray-400 mt-1">
+        <div className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
           {isBreak ? 'Break ends in' : 'Focus ends in'} {minutes}m {seconds}s
         </div>
       </div>
@@ -70,15 +75,27 @@ function TimerDisplay({ timeLeft, isBreak, isRunning }) {
 
 // Task selector component
 function TaskSelector({ selectedTaskId, onSelectTask }) {
+  const { theme, accentColor } = useTheme();
   const tasks = useUncompletedTasks();
   return (
     <div className="relative">
     <select
       value={selectedTaskId || ''}
       onChange={(e) => onSelectTask(e.target.value)}
-        className="w-full p-4 pl-5 pr-10 border border-gray-200 rounded-2xl bg-white/90 backdrop-blur-sm
-                 text-gray-700 appearance-none hover:border-blue-400 transition-all duration-200
-                 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+        className="w-full p-4 pl-5 pr-10 rounded-2xl appearance-none transition-all duration-200
+                 focus:outline-none focus:ring-2 focus:ring-opacity-20"
+        style={{
+          backgroundColor: 'var(--background-secondary)',
+          color: 'var(--text-primary)',
+          border: '1px solid var(--border-color)',
+          ':hover': {
+            borderColor: `var(--accent-${accentColor})`
+          },
+          ':focus': {
+            borderColor: `var(--accent-${accentColor})`,
+            boxShadow: `0 0 0 2px var(--accent-${accentColor})`
+          }
+        }}
     >
       <option value="">Select a task to focus on...</option>
       {tasks.map(task => (
@@ -87,7 +104,7 @@ function TaskSelector({ selectedTaskId, onSelectTask }) {
         </option>
       ))}
     </select>
-      <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-400">
+      <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none" style={{ color: 'var(--text-tertiary)' }}>
         <svg className="w-5 h-5 transition-transform duration-200 transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
         </svg>
@@ -98,25 +115,28 @@ function TaskSelector({ selectedTaskId, onSelectTask }) {
 
 // Session progress component
 function SessionProgress({ sessionCount, totalSessions = 4 }) {
+  const { theme, accentColor } = useTheme();
   return (
     <div className="flex flex-col items-center gap-2 mb-8">
       <div className="flex justify-center gap-3">
         {Array.from({ length: totalSessions }).map((_, index) => (
           <div
             key={index}
-            className={`w-4 h-4 rounded-full transition-all duration-300 flex items-center justify-center ${
-              index < (sessionCount % totalSessions)
-                ? 'bg-blue-500 scale-110'
-                : 'bg-gray-200'
-            }`}
+            className="w-4 h-4 rounded-full transition-all duration-300 flex items-center justify-center"
+            style={{
+              backgroundColor: index < (sessionCount % totalSessions)
+                ? `var(--accent-${accentColor})`
+                : 'var(--border-color)',
+              transform: index < (sessionCount % totalSessions) ? 'scale(1.1)' : 'scale(1)'
+            }}
           >
             {index < (sessionCount % totalSessions) && (
-              <div className="w-2 h-2 rounded-full bg-white animate-ping" />
+              <div className="w-2 h-2 rounded-full animate-ping" style={{ backgroundColor: 'var(--background-primary)' }} />
             )}
           </div>
         ))}
       </div>
-      <div className="text-sm text-gray-500">
+      <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
         Session {(sessionCount % totalSessions) + 1} of {totalSessions}
       </div>
     </div>
@@ -125,17 +145,24 @@ function SessionProgress({ sessionCount, totalSessions = 4 }) {
 
 // Stats display component
 function StatsDisplay({ sessionCount, totalFocusTime }) {
+  const { theme, accentColor } = useTheme();
   return (
     <div className="grid grid-cols-2 gap-4 mb-8">
-      <div className="bg-gray-50/50 backdrop-blur-sm rounded-xl p-4 text-center">
-        <div className="text-2xl font-bold text-gray-700">{sessionCount}</div>
-        <div className="text-sm text-gray-500">Sessions Completed</div>
+      <div className="backdrop-blur-sm rounded-xl p-4 text-center" style={{
+        backgroundColor: 'var(--background-secondary)',
+        border: '1px solid var(--border-color)'
+      }}>
+        <div className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{sessionCount}</div>
+        <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Sessions Completed</div>
       </div>
-      <div className="bg-gray-50/50 backdrop-blur-sm rounded-xl p-4 text-center">
-        <div className="text-2xl font-bold text-gray-700">
+      <div className="backdrop-blur-sm rounded-xl p-4 text-center" style={{
+        backgroundColor: 'var(--background-secondary)',
+        border: '1px solid var(--border-color)'
+      }}>
+        <div className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
           {Math.round(totalFocusTime / 60)}m
         </div>
-        <div className="text-sm text-gray-500">Total Focus Time</div>
+        <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Total Focus Time</div>
       </div>
     </div>
   );
@@ -151,6 +178,7 @@ export default function FocusPage() {
   const [totalFocusTime, setTotalFocusTime] = useState(0);
   const updateTask = useUpdateTask();
   const tasks = useUncompletedTasks();
+  const { isDark } = useTheme();
 
   // Timer effect
   useEffect(() => {
@@ -227,7 +255,11 @@ export default function FocusPage() {
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">
-      <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-8 border border-gray-100">
+      <div className={`backdrop-blur-sm rounded-3xl shadow-xl p-8 border ${
+        isDark 
+          ? 'bg-gray-900/80 border-gray-700' 
+          : 'bg-white/80 border-gray-100'
+      }`}>
         <h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent text-center">
           Focus Mode
         </h1>

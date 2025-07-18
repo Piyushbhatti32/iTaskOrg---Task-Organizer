@@ -63,6 +63,63 @@ export const createUserProfile = async (userId, data) => {
   });
 };
 
+export const createOrUpdateUserProfile = async (userId, data) => {
+  try {
+    const existingUser = await getUserProfile(userId);
+    if (existingUser) {
+      // Update existing user
+      return updateUserProfile(userId, data);
+    } else {
+      // Create new user profile
+      return createUserProfile(userId, data);
+    }
+  } catch (error) {
+    console.error('Error creating/updating user profile:', error);
+    throw error;
+  }
+};
+
+export const searchUsers = async (searchQuery, limitCount = 10) => {
+  try {
+    const usersRef = collection(db, 'users');
+    
+    if (searchQuery.trim()) {
+      // Get all users and filter client-side for better search
+      const allUsersQuery = query(usersRef, limit(100));
+      const snapshot = await getDocs(allUsersQuery);
+      
+      const lowerQuery = searchQuery.toLowerCase();
+      return snapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        .filter(user => {
+          const name = user.displayName || user.name || '';
+          const email = user.email || '';
+          return name.toLowerCase().includes(lowerQuery) || 
+                 email.toLowerCase().includes(lowerQuery);
+        })
+        .slice(0, limitCount);
+    } else {
+      // Return recent users
+      const recentQuery = query(
+        usersRef,
+        orderBy('createdAt', 'desc'),
+        limit(limitCount)
+      );
+      const snapshot = await getDocs(recentQuery);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    }
+  } catch (error) {
+    console.error('Error searching users:', error);
+    throw error;
+  }
+};
+
 export const updateUserProfile = async (userId, data) => {
   return updateDocument('users', userId, data);
 };

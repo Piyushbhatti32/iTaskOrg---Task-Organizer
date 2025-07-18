@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { User, Mail, Globe, MapPin, Calendar, Trophy, TrendingUp, Activity, Settings, Camera, Edit3, Save, X, Loader2 } from 'lucide-react';
 import { useTasks, useProfile, useUpdateProfile } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useProfileImage } from '../../hooks/useProfileImage';
 
 // Add a utility function for consistent date formatting
@@ -28,6 +29,7 @@ function ProfileHeader({ profile, onEdit }) {
   const { uploadImage, uploading, error: uploadError } = useProfileImage();
   const fileInputRef = useRef(null);
   const { user } = useAuth();
+  const { isDark } = useTheme();
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -47,7 +49,7 @@ function ProfileHeader({ profile, onEdit }) {
   const avatarUrl = profile.avatar || '';
 
   return (
-    <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 mb-8 text-white relative overflow-hidden">
+<div className={`bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 mb-8 ${isDark ? 'text-gray-200' : 'text-white'} relative overflow-hidden`}>
       <div className="absolute inset-0 bg-black/10"></div>
       <div className="relative flex flex-col md:flex-row items-center gap-8">
         <div className="relative group">
@@ -142,6 +144,7 @@ function ProfileHeader({ profile, onEdit }) {
 
 // Enhanced Profile Form with Modal
 function ProfileForm({ profile, onUpdate, isOpen, onClose }) {
+  const { isDark } = useTheme();
   const [formData, setFormData] = useState({
     name: profile.name || '',
     email: profile.email || '',
@@ -163,10 +166,10 @@ function ProfileForm({ profile, onUpdate, isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+<div className={`rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Edit Profile</h2>
+<h2 className={`text-2xl font-bold ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>Edit Profile</h2>
             <button
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -177,21 +180,23 @@ function ProfileForm({ profile, onUpdate, isOpen, onClose }) {
 
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+<label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <User className="w-4 h-4 inline mr-1" />
                 Name
               </label>
-              <input
+<input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
-                className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
+                className={`w-full border-2 rounded-lg px-4 py-3 transition-colors ${isDark ? 'bg-gray-700 border-gray-600 text-gray-200 focus:border-blue-400' : 'border-gray-200 text-gray-900 focus:border-blue-500'}`}
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className={`block text-sm font-medium mb-2 ${
+                isDark ? 'text-gray-300' : 'text-gray-700'
+              }`}>
                 <Mail className="w-4 h-4 inline mr-1" />
                 Email
               </label>
@@ -199,34 +204,44 @@ function ProfileForm({ profile, onUpdate, isOpen, onClose }) {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
-                className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
+                className={`w-full border-2 rounded-lg px-4 py-3 focus:outline-none transition-colors ${
+                  isDark ? 'border-gray-600 bg-gray-700 text-gray-200 focus:border-blue-400' : 'border-gray-200 bg-white text-gray-900 focus:border-blue-500'
+                }`}
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className={`block text-sm font-medium mb-2 ${
+                isDark ? 'text-gray-300' : 'text-gray-700'
+              }`}>
                 <Edit3 className="w-4 h-4 inline mr-1" />
                 Bio
               </label>
               <textarea
                 value={formData.bio}
                 onChange={(e) => setFormData({...formData, bio: e.target.value})}
-                className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
+                className={`w-full border-2 rounded-lg px-4 py-3 focus:outline-none transition-colors ${
+                  isDark ? 'border-gray-600 bg-gray-700 text-gray-200 placeholder:text-gray-400 focus:border-blue-400' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-500 focus:border-blue-500'
+                }`}
                 rows="4"
                 placeholder="Tell us about yourself..."
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className={`block text-sm font-medium mb-2 ${
+                isDark ? 'text-gray-300' : 'text-gray-700'
+              }`}>
                 <Globe className="w-4 h-4 inline mr-1" />
                 Timezone
               </label>
               <select
                 value={formData.timezone}
                 onChange={(e) => setFormData({...formData, timezone: e.target.value})}
-                className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
+                className={`w-full border-2 rounded-lg px-4 py-3 focus:outline-none transition-colors ${
+                  isDark ? 'border-gray-600 bg-gray-700 text-gray-200 focus:border-blue-400' : 'border-gray-200 bg-white text-gray-900 focus:border-blue-500'
+                }`}
               >
                 <option value="UTC">UTC</option>
                 <option value="America/New_York">Eastern Time</option>
@@ -243,7 +258,9 @@ function ProfileForm({ profile, onUpdate, isOpen, onClose }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 py-3 px-4 border-2 border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className={`flex-1 py-3 px-4 border-2 rounded-lg transition-colors ${
+                  isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                }`}
               >
                 Cancel
               </button>
@@ -275,6 +292,7 @@ function ProfileForm({ profile, onUpdate, isOpen, onClose }) {
 
 // Enhanced Activity Summary with Charts
 function ActivitySummary({ tasks }) {
+  const { isDark } = useTheme();
   const today = new Date();
   const thisMonth = today.getMonth();
   const thisYear = today.getFullYear();
@@ -299,41 +317,65 @@ function ActivitySummary({ tasks }) {
   const completionRate = tasks.length ? Math.round((stats.completed / tasks.length) * 100) : 0;
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+    <div className={`rounded-2xl shadow-lg p-6 mb-8 ${
+      isDark ? 'bg-gray-800' : 'bg-white'
+    }`}>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Activity Overview</h2>
+        <h2 className={`text-2xl font-bold ${
+          isDark ? 'text-gray-100' : 'text-gray-900'
+        }`}>Activity Overview</h2>
         <TrendingUp className="w-6 h-6 text-green-500" />
       </div>
       
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <div className="text-center p-4 bg-blue-50 rounded-xl">
+        <div className={`text-center p-4 rounded-xl ${
+          isDark ? 'bg-blue-900/30' : 'bg-blue-50'
+        }`}>
           <div className="text-3xl font-bold text-blue-600 mb-1">{tasks.length}</div>
-          <div className="text-sm text-gray-600">Total Tasks</div>
+          <div className={`text-sm ${
+            isDark ? 'text-gray-300' : 'text-gray-600'
+          }`}>Total Tasks</div>
         </div>
         
-        <div className="text-center p-4 bg-green-50 rounded-xl">
+        <div className={`text-center p-4 rounded-xl ${
+          isDark ? 'bg-green-900/30' : 'bg-green-50'
+        }`}>
           <div className="text-3xl font-bold text-green-600 mb-1">{stats.completed}</div>
-          <div className="text-sm text-gray-600">Completed</div>
+          <div className={`text-sm ${
+            isDark ? 'text-gray-300' : 'text-gray-600'
+          }`}>Completed</div>
         </div>
         
-        <div className="text-center p-4 bg-purple-50 rounded-xl">
+        <div className={`text-center p-4 rounded-xl ${
+          isDark ? 'bg-purple-900/30' : 'bg-purple-50'
+        }`}>
           <div className="text-3xl font-bold text-purple-600 mb-1">{completionRate}%</div>
-          <div className="text-sm text-gray-600">Success Rate</div>
+          <div className={`text-sm ${
+            isDark ? 'text-gray-300' : 'text-gray-600'
+          }`}>Success Rate</div>
         </div>
         
-        <div className="text-center p-4 bg-orange-50 rounded-xl">
+        <div className={`text-center p-4 rounded-xl ${
+          isDark ? 'bg-orange-900/30' : 'bg-orange-50'
+        }`}>
           <div className="text-3xl font-bold text-orange-600 mb-1">{stats.thisMonth}</div>
-          <div className="text-sm text-gray-600">This Month</div>
+          <div className={`text-sm ${
+            isDark ? 'text-gray-300' : 'text-gray-600'
+          }`}>This Month</div>
         </div>
       </div>
 
       {/* Progress bar */}
       <div className="mt-6">
-        <div className="flex justify-between text-sm text-gray-600 mb-2">
+        <div className={`flex justify-between text-sm mb-2 ${
+          isDark ? 'text-gray-300' : 'text-gray-600'
+        }`}>
           <span>Progress</span>
           <span>{completionRate}%</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-3">
+        <div className={`w-full rounded-full h-3 ${
+          isDark ? 'bg-gray-700' : 'bg-gray-200'
+        }`}>
           <div 
             className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500"
             style={{ width: `${completionRate}%` }}
@@ -346,16 +388,25 @@ function ActivitySummary({ tasks }) {
 
 // Enhanced Recent Activity
 function RecentActivity({ tasks }) {
+  const { isDark } = useTheme();
   const recentTasks = tasks
     .filter(task => task.completedAt)
     .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
     .slice(0, 5);
 
   const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default: return 'bg-green-100 text-green-800 border-green-200';
+    if (isDark) {
+      switch (priority) {
+        case 'high': return 'bg-red-900/50 text-red-300 border-red-700/50';
+        case 'medium': return 'bg-yellow-900/50 text-yellow-300 border-yellow-700/50';
+        default: return 'bg-green-900/50 text-green-300 border-green-700/50';
+      }
+    } else {
+      switch (priority) {
+        case 'high': return 'bg-red-100 text-red-800 border-red-200';
+        case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        default: return 'bg-green-100 text-green-800 border-green-200';
+      }
     }
   };
 
@@ -369,27 +420,42 @@ function RecentActivity({ tasks }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Activity</h2>
+    <div className={`backdrop-blur-sm rounded-2xl shadow-lg border p-6 transition-all duration-300 hover:shadow-xl ${
+      isDark ? 'bg-gray-800/70 border-gray-700/50 hover:bg-gray-800/80' : 'bg-white/70 border-white/20 hover:bg-white/80'
+    }`}>
+      <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Recent Activity</h2>
       
       {recentTasks.length === 0 ? (
         <div className="text-center py-12">
-          <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">No recent activity</p>
+          <Activity className={`w-12 h-12 mx-auto mb-4 ${
+            isDark ? 'text-gray-500' : 'text-gray-400'
+          }`} />
+          <p className={`${
+            isDark ? 'text-gray-400' : 'text-gray-500'
+          }`}>No recent activity</p>
+          <p className={`text-sm ${
+            isDark ? 'text-gray-500' : 'text-gray-400'
+          }`}>All your recent tasks and completions will appear here.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {recentTasks.map((task, index) => (
-            <div key={task.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+            <div key={task.id} className={`flex items-center gap-4 p-4 rounded-xl transition-colors ${
+              isDark ? 'bg-gray-700/50 hover:bg-gray-600/50' : 'bg-gray-50 hover:bg-gray-100'
+            }`}>
               <div className="flex-shrink-0">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white">
                   <span className="text-lg">{getCategoryIcon(task.category)}</span>
                 </div>
               </div>
               
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-gray-900 truncate">{task.title}</div>
-                <div className="text-sm text-gray-500">
+                <div className={`font-medium truncate ${
+                  isDark ? 'text-gray-100' : 'text-gray-900'
+                }`}>{task.title}</div>
+                <div className={`text-sm ${
+                  isDark ? 'text-gray-400' : 'text-gray-500'
+                }`}>
                   Completed {new Date(task.completedAt).toLocaleDateString()}
                 </div>
               </div>
@@ -409,6 +475,7 @@ function RecentActivity({ tasks }) {
 
 // Category Distribution Chart
 function CategoryChart({ tasks }) {
+  const { isDark } = useTheme();
   const categories = tasks.reduce((acc, task) => {
     const category = task.category || 'other';
     acc[category] = (acc[category] || 0) + 1;
@@ -419,22 +486,32 @@ function CategoryChart({ tasks }) {
   const total = Object.values(categories).reduce((sum, count) => sum + count, 0);
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Task Categories</h2>
+    <div className={`rounded-2xl shadow-lg p-6 mb-8 ${
+      isDark ? 'bg-gray-800' : 'bg-white'
+    }`}>
+      <h2 className={`text-2xl font-bold mb-6 ${
+        isDark ? 'text-gray-100' : 'text-gray-900'
+      }`}>Task Categories</h2>
       
       <div className="space-y-4">
         {Object.entries(categories).map(([category, count], index) => {
           const percentage = total > 0 ? (count / total) * 100 : 0;
           return (
             <div key={category} className="flex items-center gap-4">
-              <div className="w-16 text-sm font-medium text-gray-600 capitalize">{category}</div>
-              <div className="flex-1 bg-gray-200 rounded-full h-3">
+              <div className={`w-16 text-sm font-medium capitalize ${
+                isDark ? 'text-gray-300' : 'text-gray-600'
+              }`}>{category}</div>
+              <div className={`flex-1 rounded-full h-3 ${
+                isDark ? 'bg-gray-700' : 'bg-gray-200'
+              }`}>
                 <div 
                   className={`h-3 rounded-full ${colors[index % colors.length]} transition-all duration-500`}
                   style={{ width: `${percentage}%` }}
                 ></div>
               </div>
-              <div className="w-12 text-sm text-gray-600">{count}</div>
+              <div className={`w-12 text-sm ${
+                isDark ? 'text-gray-300' : 'text-gray-600'
+              }`}>{count}</div>
             </div>
           );
         })}
@@ -449,6 +526,7 @@ export default function ProfilePage() {
   const profile = useProfile();
   const updateProfile = useUpdateProfile();
   const { user } = useAuth();
+  const { isDark } = useTheme();
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showDebugInfo, setShowDebugInfo] = useState(false);
@@ -463,7 +541,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4 bg-gray-50 min-h-screen">
+<div className={`max-w-4xl mx-auto py-8 px-4 min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <ProfileHeader 
         profile={profile} 
         onEdit={() => setIsEditModalOpen(true)}
@@ -486,15 +564,25 @@ export default function ProfilePage() {
           <CategoryChart tasks={tasks} />
           
           {/* Settings Card */}
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Settings</h2>
+          <div className={`rounded-2xl shadow-lg p-6 ${
+            isDark ? 'bg-gray-800' : 'bg-white'
+          }`}>
+            <h2 className={`text-xl font-bold mb-4 ${
+              isDark ? 'text-gray-100' : 'text-gray-900'
+            }`}>Quick Settings</h2>
             <div className="space-y-3">
               <button 
                 onClick={() => setShowDebugInfo(!showDebugInfo)}
-                className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
+                className={`w-full flex items-center gap-3 p-3 text-left rounded-lg transition-colors ${
+                  isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
+                }`}
               >
-                <Settings className="w-5 h-5 text-gray-600" />
-                <span className="text-gray-700">Debug Info</span>
+                <Settings className={`w-5 h-5 ${
+                  isDark ? 'text-gray-400' : 'text-gray-600'
+                }`} />
+                <span className={`${
+                  isDark ? 'text-gray-300' : 'text-gray-700'
+                }`}>Debug Info</span>
               </button>
             </div>
           </div>
@@ -503,13 +591,21 @@ export default function ProfilePage() {
 
       {/* Debug Info */}
       {showDebugInfo && (
-        <div className="mt-8 p-6 bg-gray-100 rounded-2xl">
-          <h3 className="font-bold text-gray-900 mb-4">Debug Information</h3>
+        <div className={`mt-8 p-6 rounded-2xl ${
+          isDark ? 'bg-gray-800' : 'bg-gray-100'
+        }`}>
+          <h3 className={`font-bold mb-4 ${
+            isDark ? 'text-gray-100' : 'text-gray-900'
+          }`}>Debug Information</h3>
           <div className="space-y-4">
             <div>
-              <strong className="text-gray-700">Auth User:</strong>
+              <strong className={`${
+                isDark ? 'text-gray-300' : 'text-gray-700'
+              }`}>Auth User:</strong>
               {user ? (
-                <pre className="text-xs mt-2 bg-white p-4 rounded-lg overflow-x-auto text-gray-900 border">
+                <pre className={`text-xs mt-2 p-4 rounded-lg overflow-x-auto border ${
+                  isDark ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-white text-gray-900 border-gray-300'
+                }`}>
                   {JSON.stringify(user, null, 2)}
                 </pre>
               ) : (
@@ -517,8 +613,12 @@ export default function ProfilePage() {
               )}
             </div>
             <div>
-              <strong className="text-gray-700">Profile Data:</strong>
-              <pre className="text-xs mt-2 bg-white p-4 rounded-lg overflow-x-auto text-gray-900 border">
+              <strong className={`${
+                isDark ? 'text-gray-300' : 'text-gray-700'
+              }`}>Profile Data:</strong>
+              <pre className={`text-xs mt-2 p-4 rounded-lg overflow-x-auto border ${
+                isDark ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-white text-gray-900 border-gray-300'
+              }`}>
                 {JSON.stringify(profile, null, 2)}
               </pre>
             </div>
