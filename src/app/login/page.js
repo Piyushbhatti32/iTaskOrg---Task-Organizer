@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { Mail, Lock, Eye, EyeOff, User, CheckCircle, AlertCircle, ArrowRight, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
@@ -537,12 +538,14 @@ export default function LoginPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <img
-              src="/icon.svg"
-              alt="App Icon"
-              className="w-16 h-16 hover:scale-110 transition-transform"
-              style={{ filter: 'invert(1)' }}
-            />
+          <Image
+            src="/icon.svg"
+            alt="App Icon"
+            width={64}
+            height={64}
+            className="w-16 h-16 hover:scale-110 transition-transform"
+            style={{ filter: 'invert(1)' }}
+          />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">iTaskOrg</span>

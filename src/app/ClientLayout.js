@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import './globals.css';
@@ -28,9 +29,11 @@ function UserProfile({ user }) {
     if (!user) return <User className="w-5 h-5" />;
     if (user.photoURL) {
       return (
-        <img 
+        <Image 
           src={user.photoURL} 
           alt={user.displayName || 'Profile'} 
+          width={40}
+          height={40}
           className="w-full h-full object-cover"
           onError={(e) => {
             e.target.style.display = 'none';
@@ -119,19 +122,21 @@ function MobileHeader({ onMenuClick, user }) {
         </div>
         
         <Link href="/profile" className="flex items-center">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white overflow-hidden">
-            {user.photoURL ? (
-              <img 
-                src={user.photoURL} 
-                alt={user.displayName || 'Profile'} 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-sm font-medium">
-                {user.displayName?.charAt(0) || <User className="w-4 h-4" />}
-              </span>
-            )}
-          </div>
+        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white overflow-hidden">
+          {user.photoURL ? (
+            <Image 
+              src={user.photoURL} 
+              alt={user.displayName || 'Profile'} 
+              width={32}
+              height={32}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="text-sm font-medium">
+              {user.displayName?.charAt(0) || <User className="w-4 h-4" />}
+            </span>
+          )}
+        </div>
         </Link>
       </div>
     </header>
@@ -190,9 +195,11 @@ function MobileNavOverlay({ isOpen, onClose, user }) {
         >
           <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white overflow-hidden">
             {user.photoURL ? (
-              <img 
+              <Image 
                 src={user.photoURL} 
                 alt={user.displayName || 'Profile'} 
+                width={40}
+                height={40}
                 className="w-full h-full object-cover"
               />
             ) : (
