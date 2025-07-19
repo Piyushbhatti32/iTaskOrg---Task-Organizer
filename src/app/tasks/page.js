@@ -241,11 +241,12 @@ function TaskInput({ onAdd }) {
 function Subtasks({ task }) {
   const { addSubtask, toggleSubtask, deleteSubtask } = useTaskActions();
   const [subtaskTitle, setSubtaskTitle] = useState('');
+  const { isDark } = useTheme();
 
   return (
-    <div className="ml-9 mt-3 pb-4">
+    <div className="ml-0 sm:ml-9 mt-3 pb-4">
       <form
-        className="flex gap-2 mb-3"
+        className="flex flex-col sm:flex-row gap-2 mb-3"
         onSubmit={e => {
           e.preventDefault();
           if (subtaskTitle.trim()) {
@@ -255,14 +256,14 @@ function Subtasks({ task }) {
         }}
       >
         <input
-          className="flex-1 bg-white/50 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+          className={`flex-1 ${isDark ? 'bg-gray-800/50 border-gray-700 text-gray-100 placeholder:text-gray-400' : 'bg-white/50 border-gray-200 text-gray-900 placeholder:text-gray-400'} border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300`}
           placeholder="Add subtask..."
           value={subtaskTitle}
           onChange={e => setSubtaskTitle(e.target.value)}
         />
         <button
           type="submit"
-          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-600 font-medium transition-all duration-300 hover:shadow-md active:scale-95"
+          className={`px-4 py-2 ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'} rounded-xl font-medium transition-all duration-300 hover:shadow-md active:scale-95`}
         >
           Add
         </button>
@@ -270,21 +271,25 @@ function Subtasks({ task }) {
       <ul className="space-y-2">
         {task.subtasks?.map(st => (
           <li key={st.id} className="flex items-center gap-3 group">
-            <div className="relative">
-            <input
-              type="checkbox"
-              checked={st.completed}
-              onChange={() => toggleSubtask(task.id, st.id)}
+            <div className="relative flex-shrink-0">
+              <input
+                type="checkbox"
+                checked={st.completed}
+                onChange={() => toggleSubtask(task.id, st.id)}
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 transition-colors peer"
-            />
+              />
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded opacity-0 peer-checked:opacity-100 transition-opacity duration-300" />
             </div>
-            <span className={`text-sm transition-all duration-300 ${st.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+            <span className={`text-sm transition-all duration-300 flex-1 break-words ${
+              st.completed 
+                ? `line-through ${isDark ? 'text-gray-500' : 'text-gray-400'}` 
+                : isDark ? 'text-gray-200' : 'text-gray-700'
+            }`}>
               {st.title}
             </span>
             <button
               onClick={() => deleteSubtask(task.id, st.id)}
-              className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all duration-300 ml-auto"
+              className={`sm:opacity-0 sm:group-hover:opacity-100 p-1 ${isDark ? 'text-gray-400 hover:text-red-400 hover:bg-red-900/30' : 'text-gray-400 hover:text-red-600 hover:bg-red-50'} rounded-lg transition-all duration-300 flex-shrink-0`}
               title="Delete subtask"
             >
               <Trash2 className="w-4 h-4" />
@@ -371,12 +376,12 @@ export default function TasksPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
+    <div className="max-w-4xl mx-auto py-4 lg:py-8 px-4">
       <div className="relative">
         <div className={`absolute inset-0 rounded-3xl -z-10 ${isDark ? 'bg-gradient-to-br from-gray-900/30 via-gray-800/30 to-gray-900/30' : 'bg-gradient-to-br from-blue-50 via-purple-50/50 to-pink-50'}`} />
         <div className={`absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] opacity-40 -z-10 ${isDark ? 'opacity-20' : 'opacity-40'}`} />
-        <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text">Tasks</h1>
-        <p className={`mb-8 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Manage your tasks and stay organized</p>
+        <h1 className="text-2xl lg:text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text">Tasks</h1>
+        <p className={`mb-6 lg:mb-8 text-sm lg:text-base ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Manage your tasks and stay organized</p>
       
       <TaskInput onAdd={addTask} />
       
@@ -396,61 +401,65 @@ export default function TasksPage() {
                 className={`group ${isDark ? 'bg-gray-900/70' : 'bg-white/70'} backdrop-blur-sm rounded-2xl shadow-lg border ${isDark ? 'border-gray-700/50' : 'border-white/20'} overflow-hidden transition-all duration-300 hover:shadow-xl ${isDark ? 'hover:bg-gray-900/80' : 'hover:bg-white/80'}`}
               >
                 <div className="p-5">
-              <div className="flex items-center gap-3">
+              <div className="flex items-start sm:items-center gap-3">
                 <button
                   onClick={() => toggleTaskCompletion(task.id)}
-                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+                  className={`mt-1 sm:mt-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 flex-shrink-0 ${
                     task.completed
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 border-transparent scale-105'
-                          : 'border-gray-300 hover:border-blue-500 hover:scale-105'
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 border-transparent scale-105'
+                      : 'border-gray-300 hover:border-blue-500 hover:scale-105'
                   }`}
                 >
-                      {task.completed && <CheckCircle className="w-4 h-4 text-white" />}
+                  {task.completed && <CheckCircle className="w-4 h-4 text-white" />}
                 </button>
                 
                 {editingId === task.id ? (
-                  <div className="flex-1 flex items-center gap-2">
+                  <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                     <input
-                          className="flex-1 bg-white/50 border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`flex-1 ${isDark ? 'bg-gray-800/50 border-gray-700 text-gray-100' : 'bg-white/50 border-gray-200 text-gray-900'} border rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                       value={editTitle}
                       onChange={e => setEditTitle(e.target.value)}
                     />
-                    <button
-                      onClick={() => saveEdit(task)}
-                          className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium hover:from-blue-600 hover:to-purple-600 transition-all duration-300"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={() => setEditingId(null)}
-                          className="px-4 py-2 rounded-xl bg-gray-100 text-gray-600 font-medium hover:bg-gray-200 transition-all duration-300"
-                    >
-                      Cancel
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => saveEdit(task)}
+                        className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium hover:from-blue-600 hover:to-purple-600 transition-all duration-300"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className={`flex-1 sm:flex-none px-4 py-2 rounded-xl ${isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} font-medium transition-all duration-300`}
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="flex-1 flex items-center gap-4">
-                        <span className={`text-lg transition-all duration-300 ${task.completed ? 'line-through text-gray-400' : 'text-gray-900'}`}>
-                      {task.title}
-                    </span>
-                    {task.priority && (
-                          <span className={`text-xs px-3 py-1.5 rounded-full ring-1 ${priorityColors.bg} ${priorityColors.text} ${priorityColors.ring} font-medium transition-all duration-300`}>
-                        {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                      <span className={`text-base sm:text-lg transition-all duration-300 break-words ${task.completed ? `line-through ${isDark ? 'text-gray-500' : 'text-gray-400'}` : isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                        {task.title}
                       </span>
-                    )}
+                      {task.priority && (
+                        <span className={`text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full ring-1 ${priorityColors.bg} ${priorityColors.text} ${priorityColors.ring} font-medium transition-all duration-300 self-start`}>
+                          {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
                 
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300 flex-shrink-0">
                   <button
                     onClick={() => startEdit(task)}
-                        className="p-2 text-gray-400 hover:text-blue-600 rounded-xl hover:bg-blue-50 transition-all duration-300"
+                    className={`p-2 ${isDark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-800' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'} rounded-xl transition-all duration-300`}
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => deleteTask(task.id)}
-                        className="p-2 text-gray-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-all duration-300"
+                    className={`p-2 ${isDark ? 'text-gray-400 hover:text-red-400 hover:bg-red-900/30' : 'text-gray-400 hover:text-red-600 hover:bg-red-50'} rounded-xl transition-all duration-300`}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -458,27 +467,27 @@ export default function TasksPage() {
               </div>
 
               {task.description && (
-                    <p className="mt-3 text-sm text-gray-600 ml-9">{task.description}</p>
+                <p className={`mt-3 text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'} ml-0 sm:ml-9`}>{task.description}</p>
               )}
 
               {(task.dueDate || task.category || task.assignedUsers?.length > 0) && (
-                    <div className="mt-3 ml-9 flex items-center gap-6 text-sm text-gray-500">
+                <div className="mt-3 ml-0 sm:ml-9 flex flex-wrap items-center gap-2 sm:gap-3 text-sm">
                   {task.dueDate && (
-                        <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full">
-                          <Calendar className="w-4 h-4 text-gray-400" />
-                      <span>{new Date(task.dueDate).toLocaleDateString()}</span>
+                    <div className={`flex items-center gap-2 ${isDark ? 'bg-gray-800/50 text-gray-300' : 'bg-gray-50 text-gray-700'} px-3 py-1.5 rounded-full`}>
+                      <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                      <span className="text-xs sm:text-sm">{new Date(task.dueDate).toLocaleDateString()}</span>
                     </div>
                   )}
                   {task.category && (
-                        <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full">
-                          <Tag className="w-4 h-4 text-gray-400" />
-                      <span>{task.category}</span>
+                    <div className={`flex items-center gap-2 ${isDark ? 'bg-gray-800/50 text-gray-300' : 'bg-gray-50 text-gray-700'} px-3 py-1.5 rounded-full`}>
+                      <Tag className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                      <span className="text-xs sm:text-sm">{task.category}</span>
                     </div>
                   )}
                   {task.assignedUsers?.length > 0 && (
-                        <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full">
-                          <Users className="w-4 h-4 text-gray-400" />
-                      <span>{task.assignedUsers.length} assigned</span>
+                    <div className={`flex items-center gap-2 ${isDark ? 'bg-gray-800/50 text-gray-300' : 'bg-gray-50 text-gray-700'} px-3 py-1.5 rounded-full`}>
+                      <Users className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                      <span className="text-xs sm:text-sm">{task.assignedUsers.length} assigned</span>
                     </div>
                   )}
                 </div>
@@ -486,14 +495,18 @@ export default function TasksPage() {
               
               {/* Assigned Users Display */}
               {task.assignedUsers?.length > 0 && (
-                <div className="mt-3 ml-9">
+                <div className="mt-3 ml-0 sm:ml-9">
                   <div className="flex items-center gap-2 mb-2">
                     <Users className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm font-medium text-gray-700">Assigned to:</span>
+                    <span className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Assigned to:</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {task.assignedUsers.map((user) => {
-                      const roleColors = {
+                      const roleColors = isDark ? {
+                        member: 'bg-blue-900/30 text-blue-300 border-blue-700',
+                        admin: 'bg-purple-900/30 text-purple-300 border-purple-700',
+                        leader: 'bg-green-900/30 text-green-300 border-green-700'
+                      } : {
                         member: 'bg-blue-100 text-blue-800 border-blue-200',
                         admin: 'bg-purple-100 text-purple-800 border-purple-200',
                         leader: 'bg-green-100 text-green-800 border-green-200'
@@ -502,13 +515,14 @@ export default function TasksPage() {
                       return (
                         <div
                           key={user.id}
-                          className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium ${roleColors[user.role] || roleColors.member}`}
+                          className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border text-xs font-medium ${roleColors[user.role] || roleColors.member}`}
                         >
-                          <div className="w-5 h-5 rounded-full bg-current opacity-20 flex items-center justify-center text-current text-xs font-bold">
+                          <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-current opacity-20 flex items-center justify-center text-current text-xs font-bold">
                             {user.name.charAt(0).toUpperCase()}
                           </div>
-                          <span>{user.name}</span>
-                          <span className="opacity-70">({user.role})</span>
+                          <span className="hidden sm:inline">{user.name}</span>
+                          <span className="sm:hidden">{user.name.split(' ')[0]}</span>
+                          <span className="opacity-70 hidden sm:inline">({user.role})</span>
                         </div>
                       );
                     })}

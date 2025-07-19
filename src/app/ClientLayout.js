@@ -5,8 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import './globals.css';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
-import { LogOut, User } from 'lucide-react';
-import { useMemo } from 'react';
+import { LogOut, User, Menu, X } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
 
 const navLinks = [
   { href: '/tasks', label: 'Tasks', icon: '📝' },
@@ -89,8 +89,165 @@ function NavigationLinks({ pathname }) {
   );
 }
 
-// Separate component for the navigation sidebar
-function NavigationSidebar() {
+// Mobile Header component
+function MobileHeader({ onMenuClick, user }) {
+  const { isDark } = useTheme();
+  const pathname = usePathname();
+  
+  const currentPage = navLinks.find(link => link.href === pathname);
+  
+  if (!user || pathname.startsWith('/login')) {
+    return null;
+  }
+
+  return (
+    <header className={`lg:hidden fixed top-0 left-0 right-0 z-50 ${isDark ? 'bg-gray-950/95 border-gray-800' : 'bg-white/95 border-gray-200'} backdrop-blur-sm border-b shadow-sm`}>
+      <div className="flex items-center justify-between p-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onMenuClick}
+            className={`p-2 rounded-xl ${isDark ? 'hover:bg-gray-800 text-gray-200' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">{currentPage?.icon || '📱'}</span>
+            <h1 className={`font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+              {currentPage?.label || 'iTaskOrg'}
+            </h1>
+          </div>
+        </div>
+        
+        <Link href="/profile" className="flex items-center">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white overflow-hidden">
+            {user.photoURL ? (
+              <img 
+                src={user.photoURL} 
+                alt={user.displayName || 'Profile'} 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-sm font-medium">
+                {user.displayName?.charAt(0) || <User className="w-4 h-4" />}
+              </span>
+            )}
+          </div>
+        </Link>
+      </div>
+    </header>
+  );
+}
+
+// Mobile Navigation Overlay
+function MobileNavOverlay({ isOpen, onClose, user }) {
+  const pathname = usePathname();
+  const { isDark } = useTheme();
+  const { logout } = useAuth();
+  const router = useRouter();
+  
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/login');
+      onClose();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+  
+  const handleLinkClick = () => {
+    onClose();
+  };
+  
+  if (!isOpen) return null;
+  
+  return (
+    <>
+      {/* Backdrop */}
+      <div 
+        className="lg:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" 
+        onClick={onClose}
+      />
+      
+      {/* Navigation Panel */}
+      <nav className={`lg:hidden fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] ${isDark ? 'bg-gray-950 border-gray-800' : 'bg-white border-gray-200'} border-r shadow-2xl z-50 transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        {/* Header */}
+        <div className={`flex items-center justify-between p-4 border-b ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">iTaskOrg</h1>
+          <button
+            onClick={onClose}
+            className={`p-2 rounded-xl ${isDark ? 'hover:bg-gray-800 text-gray-200' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        {/* User Profile */}
+        <Link 
+          href="/profile"
+          onClick={handleLinkClick}
+          className={`p-4 border-b ${isDark ? 'border-gray-800 hover:bg-gray-900' : 'border-gray-200 hover:bg-gray-50'} flex items-center gap-3 transition-colors`}
+        >
+          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white overflow-hidden">
+            {user.photoURL ? (
+              <img 
+                src={user.photoURL} 
+                alt={user.displayName || 'Profile'} 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              user.displayName?.charAt(0) || <User className="w-5 h-5" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className={`font-medium ${isDark ? 'text-gray-100' : 'text-gray-900'} truncate`}>
+              {user.displayName || 'User'}
+            </div>
+            <div className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'} truncate`}>
+              {user.email}
+            </div>
+          </div>
+        </Link>
+        
+        {/* Navigation Links */}
+        <div className="flex-1 overflow-y-auto py-4">
+          <ul className="space-y-1 px-4">
+            {navLinks.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  onClick={handleLinkClick}
+                  className={`flex items-center space-x-3 p-3 rounded-xl transition-colors ${
+                    pathname === link.href 
+                      ? `${isDark ? 'bg-gray-800 text-gray-100' : 'bg-gray-100 text-gray-900'} font-medium` 
+                      : `${isDark ? 'text-gray-200 hover:bg-gray-900' : 'text-gray-600 hover:bg-gray-100'}`
+                  }`}
+                >
+                  <span className="text-xl">{link.icon}</span>
+                  <span>{link.label}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+        
+        {/* Logout Button */}
+        <div className={`p-4 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+          <button
+            onClick={handleLogout}
+            className={`flex items-center space-x-3 p-3 w-full rounded-xl ${isDark ? 'text-red-400 hover:bg-red-900/30' : 'text-red-600 hover:bg-red-50'} transition-colors`}
+          >
+            <LogOut className="w-5 h-5" />
+            <span>Logout</span>
+          </button>
+        </div>
+      </nav>
+    </>
+  );
+}
+
+// Desktop Navigation Sidebar
+function DesktopNavigationSidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { isDark } = useTheme();
@@ -110,7 +267,7 @@ function NavigationSidebar() {
   }
 
   return (
-    <nav className={`w-64 ${isDark ? 'bg-gray-950 border-gray-800' : 'bg-white border-gray-200'} border-r shadow-sm fixed h-screen overflow-y-auto flex flex-col scrollbar-hide`}>
+    <nav className={`hidden lg:flex w-64 ${isDark ? 'bg-gray-950 border-gray-800' : 'bg-white border-gray-200'} border-r shadow-sm fixed h-screen overflow-y-auto flex-col scrollbar-hide z-30`}>
       <div className={`p-4 border-b ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
         <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">iTaskOrg</h1>
       </div>
@@ -137,25 +294,69 @@ function NavigationSidebar() {
 // Main layout component
 function AppLayout({ children }) {
   const pathname = usePathname();
-  const { loading } = useAuth();
+  const { loading, user } = useAuth();
   const { isDark } = useTheme();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
+  // Close mobile menu on window resize to desktop size
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Show loading state
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
         <div className="flex flex-col items-center space-y-4">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className={isDark ? 'text-gray-300' : 'text-gray-600'}>Loading...</p>
         </div>
       </div>
     );
   }
 
+  const showNavigation = user && !pathname.startsWith('/login');
+
   return (
-    <div className={`min-h-screen flex ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
-      <NavigationSidebar />
-      <main className={`flex-1 ${!pathname.startsWith('/login') ? 'ml-64' : ''} min-h-screen`}>
+    <div className={`min-h-screen ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
+      {/* Mobile Header */}
+      {showNavigation && (
+        <MobileHeader 
+          onMenuClick={() => setIsMobileMenuOpen(true)} 
+          user={user} 
+        />
+      )}
+      
+      {/* Desktop Sidebar */}
+      {showNavigation && <DesktopNavigationSidebar />}
+      
+      {/* Mobile Navigation Overlay */}
+      {showNavigation && (
+        <MobileNavOverlay 
+          isOpen={isMobileMenuOpen} 
+          onClose={() => setIsMobileMenuOpen(false)} 
+          user={user} 
+        />
+      )}
+      
+      {/* Main Content */}
+      <main className={`min-h-screen ${
+        showNavigation 
+          ? 'lg:ml-64 pt-16 lg:pt-0' // Mobile: add top padding for header, Desktop: add left margin
+          : ''
+      }`}>
         {children}
       </main>
     </div>

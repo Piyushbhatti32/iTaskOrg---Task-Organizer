@@ -274,7 +274,7 @@ export default function GroupUserSelector({
           
           {!loading && searchQuery.trim().length >= 2 && availableUsers.length === 0 && (
             <div className={`p-4 text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              <p className="text-sm mb-3">No registered users found matching "{searchQuery}"</p>
+              <p className="text-sm mb-3">No registered users found matching &ldquo;{searchQuery}&rdquo;</p>
               <button
                 onClick={() => setShowManualEntry(true)}
                 className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1 mx-auto"

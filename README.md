@@ -1,6 +1,6 @@
 # iTaskOrg - Task Organizer
 
-A modern, feature-rich task management application built with Next.js and Tailwind CSS.
+A modern, feature-rich task management application built with Next.js and Tailwind CSS. Fully responsive and optimized for all devices.
 
 ## Features
 
@@ -41,6 +41,13 @@ A modern, feature-rich task management application built with Next.js and Tailwi
   - Timer settings
   - Profile management
 
+- 📱 **Mobile Responsive**
+  - Fully responsive design for all devices
+  - Mobile-first navigation with hamburger menu
+  - Touch-friendly interface elements
+  - Optimized layouts for phones, tablets, and desktops
+  - Seamless experience across different screen sizes
+
 ## Getting Started
 
 1. Clone the repository:
@@ -60,6 +67,55 @@ A modern, feature-rich task management application built with Next.js and Tailwi
    ```
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Deployment
+
+### Vercel (Recommended)
+
+This app is optimized for deployment on Vercel, the platform from the creators of Next.js:
+
+1. Connect your GitHub repository to Vercel:
+   - Visit [vercel.com](https://vercel.com)
+   - Import your repository
+   - Vercel will auto-detect Next.js and configure build settings
+
+2. Set up environment variables in Vercel dashboard:
+   - Add your Firebase configuration variables
+   - Add any other required environment variables
+
+3. Deploy:
+   ```bash
+   # Automatic deployment on git push
+   git push origin main
+   ```
+
+### Firebase Hosting (Static Export)
+
+For static hosting without server-side features:
+
+1. Modify `next.config.mjs` to enable static export:
+   ```javascript
+   /** @type {import('next').NextConfig} */
+   const nextConfig = {
+     output: 'export',
+     trailingSlash: true,
+     images: {
+       unoptimized: true
+     }
+   };
+   ```
+
+2. Build and export:
+   ```bash
+   npm run build
+   firebase deploy
+   ```
+
+### Other Deployment Platforms
+
+- **Netlify** - Great for static sites
+- **AWS Amplify** - Full-stack deployment
+- **Google Cloud Platform** - Enterprise-scale deployment
 
 ## Tech Stack
 
