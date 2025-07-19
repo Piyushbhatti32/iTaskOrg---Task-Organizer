@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, X, User, Shield, Users, ChevronDown, UserPlus } from 'lucide-react';
+import Image from 'next/image';
 import { useTheme } from '../../contexts/ThemeContext';
 
 const USER_ROLES = [
@@ -182,9 +183,22 @@ const response = await fetch(`/api/users/search?email=${encodeURIComponent(searc
                 className="flex items-center gap-2 bg-blue-50 text-blue-800 px-3 py-2 rounded-xl border border-blue-200 transition-all duration-200 hover:bg-blue-100"
               >
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-medium">
-                    {user.name.charAt(0).toUpperCase()}
-                  </div>
+                  {user.photoURL ? (
+                    <div className="w-6 h-6 rounded-full overflow-hidden">
+                      <Image
+                        src={user.photoURL}
+                        alt={user.name || 'User'}
+                        width={24}
+                        height={24}
+                        className="rounded-full object-cover"
+                        unoptimized
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-medium">
+                      {user.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                   <span className="text-sm font-medium">{user.name}</span>
                 </div>
                 
@@ -315,7 +329,14 @@ const response = await fetch(`/api/users/search?email=${encodeURIComponent(searc
                 >
                   {
                       user.photoURL ? (
-                        <img src={user.photoURL} alt={user.name} className="w-8 h-8 rounded-full" />
+                        <Image
+                          src={user.photoURL}
+                          alt={user.name}
+                          width={32}
+                          height={32}
+                          className="rounded-full object-cover"
+                          unoptimized
+                        />
                       ) : (
                         <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white text-sm font-medium">
                           {user.name.charAt(0).toUpperCase()}

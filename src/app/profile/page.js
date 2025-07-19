@@ -6,6 +6,7 @@ import { useTasks, useProfile, useUpdateProfile } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useProfileImage } from '../../hooks/useProfileImage';
+import Image from 'next/image';
 
 // Add a utility function for consistent date formatting
 function formatDate(dateString) {
@@ -59,15 +60,17 @@ function ProfileHeader({ profile, onEdit }) {
                 {profile.name?.charAt(0) || user?.displayName?.charAt(0) || 'A'}
               </div>
             ) : (
-              <img
-                src={avatarUrl}
-                alt={profile.name || 'Profile'}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.parentElement.innerHTML = `<div class="text-4xl font-bold text-white w-full h-full flex items-center justify-center">${profile.name?.charAt(0) || user?.displayName?.charAt(0) || 'A'}</div>`;
-                }}
-              />
+                <Image
+                  src={avatarUrl}
+                  alt={profile.name || 'Profile'}
+                  width={128}
+                  height={128}
+                  className="object-cover"
+                  onLoadingComplete={(img) => {
+                    img.style.display = 'block';
+                  }}
+                  unoptimized
+                />
             )}
           </div>
           

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function GroupCard({ group }) {
   const { user } = useAuth();
@@ -108,10 +109,13 @@ export default function GroupCard({ group }) {
                 title={member.displayName || 'Member'}
               >
                 {member.photoURL ? (
-                  <img
+                  <Image
                     src={member.photoURL}
                     alt={member.displayName || 'Member'}
-                    className="h-full w-full rounded-full"
+                    width={32}
+                    height={32}
+                    className="rounded-full"
+                    unoptimized
                   />
                 ) : (
                   <span className="text-sm font-medium text-gray-600">

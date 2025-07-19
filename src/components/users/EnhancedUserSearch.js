@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, UserPlus, CheckSquare, Users, X, Mail } from 'lucide-react';
+import Image from 'next/image';
 
 export default function EnhancedUserSearch({ 
   onAssignTask, 
@@ -115,10 +116,13 @@ export default function EnhancedUserSearch({
   const renderUserItem = (user) => (
     <div className="flex items-center gap-3">
       {user.photoURL ? (
-        <img 
-          src={user.photoURL} 
-          alt={user.name} 
-          className="w-8 h-8 rounded-full object-cover"
+        <Image
+          src={user.photoURL}
+          alt={user.name}
+          width={32}
+          height={32}
+          className="rounded-full object-cover"
+          unoptimized
         />
       ) : (
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-medium">
