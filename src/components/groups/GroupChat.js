@@ -14,36 +14,39 @@ export default function GroupChat({ groupId }) {
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
 
-  // Load initial messages and group tasks
+  // Load group tasks for mentions
+  useEffect(() => {
+    const loadGroupTasks = async () => {
+      try {
+        const response = await fetch(`/api/groups/${groupId}/tasks`, {
+          headers: {
+            'Authorization': `Bearer ${await user.getIdToken()}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to load tasks');
+        }
+
+        const data = await response.json();
+        setGroupTasks(data.tasks);
+      } catch (error) {
+        console.error('Error loading tasks:', error);
+      }
+    };
+
+    loadGroupTasks();
+  }, [groupId, user]);
+
+  // Load initial messages
   useEffect(() => {
     loadMessages();
-    loadGroupTasks();
   }, [loadMessages]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  // Load group tasks for mentions
-  const loadGroupTasks = async () => {
-    try {
-      const response = await fetch(`/api/groups/${groupId}/tasks`, {
-        headers: {
-          'Authorization': `Bearer ${await user.getIdToken()}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to load tasks');
-      }
-
-      const data = await response.json();
-      setGroupTasks(data.tasks);
-    } catch (error) {
-      console.error('Error loading tasks:', error);
-    }
-  };
 
   // Handle message submission
   const handleSubmit = (e) => {

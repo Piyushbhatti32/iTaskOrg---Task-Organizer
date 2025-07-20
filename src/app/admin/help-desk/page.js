@@ -42,19 +42,7 @@ export default function AdminHelpDeskPage() {
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [addingNote, setAddingNote] = useState(false);
-  
-  // Check if user is admin
-  useEffect(() => {
-    if (user && !isAdmin(user)) {
-      router.push('/help-desk'); // Redirect non-admin users to regular help desk
-      return;
-    }
-  }, [user, router]);
-  
-  // Don't render anything for non-admin users
-  if (user && !isAdmin(user)) {
-    return null;
-  }
+  const [isAuthorized, setIsAuthorized] = useState(null); // null = checking, true = authorized, false = not authorized
 
   // Admin users - in a real app, this would come from your user management system
   const adminUsers = [
@@ -98,10 +86,26 @@ export default function AdminHelpDeskPage() {
     ...adminUsers.map(admin => ({ value: admin.uid, label: admin.name }))
   ];
 
+  // Check if user is admin
+  useEffect(() => {
+    if (user) {
+      if (isAdmin(user)) {
+        setIsAuthorized(true);
+      } else {
+        setIsAuthorized(false);
+        router.push('/help-desk'); // Redirect non-admin users to regular help desk
+      }
+    } else {
+      setIsAuthorized(null); // Still checking
+    }
+  }, [user, router]);
+
   // Fetch all tickets (admin can see all)
   useEffect(() => {
-    fetchAllTickets();
-  }, []);
+    if (isAuthorized === true) {
+      fetchAllTickets();
+    }
+  }, [isAuthorized]);
 
   // Filter tickets
   useEffect(() => {
@@ -238,7 +242,8 @@ export default function AdminHelpDeskPage() {
 
   const stats = getTicketStats();
 
-  if (loading) {
+  // Don't render anything while checking authorization or for non-admin users
+  if (isAuthorized === null || isAuthorized === false || loading) {
     return (
       <div className={`min-h-screen p-6 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
         <div className="flex items-center justify-center h-64">

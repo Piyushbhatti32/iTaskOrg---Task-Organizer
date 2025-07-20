@@ -463,7 +463,7 @@ export default function LoginPage() {
       setRedirecting(true);
       handleRedirect();
     }
-  }, [user, redirecting, loading, isRedirectResultChecked, handleRedirect, error]);
+  }, [user, redirecting, loading, isRedirectResultChecked, handleRedirect, error, redirectAttempts]);
 
   // Reset redirect attempts when component unmounts
   useEffect(() => {
