@@ -6,8 +6,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import './globals.css';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
-import { LogOut, User, Menu, X } from 'lucide-react';
+import { LogOut, User, Menu, X, Shield } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
+import { isAdmin } from '../utils/roles';
 
 const navLinks = [
   { href: '/tasks', label: 'Tasks', icon: '📝' },
@@ -18,6 +19,7 @@ const navLinks = [
   { href: '/team', label: 'Team', icon: '🤝' },
   { href: '/stats', label: 'Statistics', icon: '📊' },
   { href: '/completed', label: 'Completed', icon: '✅' },
+  { href: '/help-desk', label: 'Help Desk', icon: '🎫' },
   { href: '/settings', label: 'Settings', icon: '⚙️' },
   { href: '/profile', label: 'Profile', icon: '👤' },
 ];
@@ -68,27 +70,62 @@ function UserProfile({ user }) {
 }
 
 // Navigation links component
-function NavigationLinks({ pathname }) {
+function NavigationLinks({ pathname, user }) {
   const { isDark } = useTheme();
+  const userIsAdmin = isAdmin(user);
+  
+  const adminLinks = [
+    { href: '/admin/help-desk', label: 'Admin Help Desk', icon: '🛠️' },
+  ];
   
   return (
-    <ul className="space-y-0.5 p-4">
-      {navLinks.map((link) => (
-        <li key={link.href}>
-          <Link
-            href={link.href}
-            className={`flex items-center space-x-2 p-3 rounded-xl transition-colors ${
-              pathname === link.href 
-                ? `${isDark ? 'bg-gray-800 text-gray-100' : 'bg-gray-100 text-gray-900'} font-medium` 
-                : `${isDark ? 'text-gray-200 hover:bg-gray-900' : 'text-gray-600 hover:bg-gray-100'}`
-            }`}
-          >
-            <span className="text-xl">{link.icon}</span>
-            <span>{link.label}</span>
-          </Link>
-        </li>
-      ))}
-    </ul>
+    <div className="p-4 space-y-4">
+      {/* Regular Navigation */}
+      <ul className="space-y-0.5">
+        {navLinks.map((link) => (
+          <li key={link.href}>
+            <Link
+              href={link.href}
+              className={`flex items-center space-x-2 p-3 rounded-xl transition-colors ${
+                pathname === link.href 
+                  ? `${isDark ? 'bg-gray-800 text-gray-100' : 'bg-gray-100 text-gray-900'} font-medium` 
+                  : `${isDark ? 'text-gray-200 hover:bg-gray-900' : 'text-gray-600 hover:bg-gray-100'}`
+              }`}
+            >
+              <span className="text-xl">{link.icon}</span>
+              <span>{link.label}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      
+      {/* Admin Section */}
+      {userIsAdmin && (
+        <div>
+          <div className={`flex items-center gap-2 px-3 py-2 mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            <Shield className="w-4 h-4" />
+            <span className="text-xs font-medium uppercase tracking-wide">Admin</span>
+          </div>
+          <ul className="space-y-0.5">
+            {adminLinks.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className={`flex items-center space-x-2 p-3 rounded-xl transition-colors ${
+                    pathname === link.href 
+                      ? `${isDark ? 'bg-red-900/30 text-red-300' : 'bg-red-50 text-red-700'} font-medium` 
+                      : `${isDark ? 'text-gray-200 hover:bg-gray-900' : 'text-gray-600 hover:bg-gray-100'}`
+                  }`}
+                >
+                  <span className="text-xl">{link.icon}</span>
+                  <span>{link.label}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -217,25 +254,8 @@ function MobileNavOverlay({ isOpen, onClose, user }) {
         </Link>
         
         {/* Navigation Links */}
-        <div className="flex-1 overflow-y-auto py-4">
-          <ul className="space-y-1 px-4">
-            {navLinks.map((link) => (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  onClick={handleLinkClick}
-                  className={`flex items-center space-x-3 p-3 rounded-xl transition-colors ${
-                    pathname === link.href 
-                      ? `${isDark ? 'bg-gray-800 text-gray-100' : 'bg-gray-100 text-gray-900'} font-medium` 
-                      : `${isDark ? 'text-gray-200 hover:bg-gray-900' : 'text-gray-600 hover:bg-gray-100'}`
-                  }`}
-                >
-                  <span className="text-xl">{link.icon}</span>
-                  <span>{link.label}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+        <div className="flex-1 overflow-y-auto" onClick={handleLinkClick}>
+          <NavigationLinks pathname={pathname} user={user} />
         </div>
         
         {/* Logout Button */}
@@ -282,7 +302,7 @@ function DesktopNavigationSidebar() {
       <UserProfile user={user} />
 
       <div className="flex-1 overflow-y-auto scrollbar-hide">
-        <NavigationLinks pathname={pathname} />
+        <NavigationLinks pathname={pathname} user={user} />
       </div>
       
       <div className={`p-4 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'} mt-auto`}>

@@ -152,11 +152,48 @@ const notificationModel = {
   link: 'string?' // Optional link to redirect when clicked
 };
 
+/**
+ * Help Desk Ticket Model
+ * Collection: 'helpDeskTickets'
+ */
+const helpDeskTicketModel = {
+  id: 'string', // Auto-generated
+  title: 'string',
+  description: 'string',
+  category: 'string', // ['general', 'bug', 'feature', 'account', 'performance', 'security']
+  priority: 'string', // ['low', 'medium', 'high', 'urgent']
+  status: 'string', // ['open', 'in-progress', 'resolved', 'closed']
+  userId: 'string', // Reference to user who created the ticket
+  userEmail: 'string',
+  userName: 'string',
+  createdAt: 'timestamp',
+  updatedAt: 'timestamp',
+  resolvedAt: 'timestamp?', // Optional timestamp when ticket was resolved
+  closedAt: 'timestamp?', // Optional timestamp when ticket was closed
+  assignedTo: 'string?', // Optional reference to admin/support user
+  responses: [{
+    id: 'string',
+    content: 'string',
+    createdBy: 'userId', // Reference to user (could be customer or support)
+    createdAt: 'timestamp',
+    isStaffResponse: 'boolean' // true if response is from support staff
+  }],
+  attachments: [{
+    url: 'string',
+    name: 'string',
+    type: 'string',
+    uploadedAt: 'timestamp'
+  }],
+  tags: ['string'], // Optional tags for categorization
+  resolution: 'string?' // Optional resolution details
+};
+
 export {
   userModel,
   taskModel,
   teamModel,
   groupModel,
   messageModel,
-  notificationModel
-}; 
+  notificationModel,
+  helpDeskTicketModel
+};
