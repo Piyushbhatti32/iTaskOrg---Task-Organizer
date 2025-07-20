@@ -6,7 +6,7 @@ export async function POST(request) {
     const { email, uid } = await request.json();
     
     // Check if this is an admin/support account
-    const adminEmails = ['admin@itaskorg.com', 'support@itaskorg.com'];
+    const adminEmails = ['itaskorg+admin@gmail.com', 'itaskorg+support@gmail.com'];
     
     if (!adminEmails.includes(email.toLowerCase())) {
       return NextResponse.json(

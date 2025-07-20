@@ -76,7 +76,7 @@ export function AuthProvider({ children }) {
       const maxAge = remember ? 7 * 24 * 60 * 60 : 3600; // 7 days if remember, 1 hour if not
       
       // Check if this is an admin/support account
-      const adminEmails = ['admin@itaskorg.com', 'support@itaskorg.com'];
+      const adminEmails = ['itaskorg+admin@gmail.com', 'itaskorg+support@gmail.com'];
       const isAdminAccount = adminEmails.includes(user.email.toLowerCase());
       const isEmailVerified = user.emailVerified || isAdminAccount;
       

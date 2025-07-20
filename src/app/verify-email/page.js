@@ -16,7 +16,7 @@ export default function VerifyEmail() {
   const redirectPath = searchParams.get('from') || '/tasks';
   
   // Check if this is an admin account
-  const adminEmails = ['admin@itaskorg.com', 'support@itaskorg.com'];
+  const adminEmails = ['itaskorg+admin@gmail.com', 'itaskorg+support@gmail.com'];
   const isAdminAccount = user?.email && adminEmails.includes(user.email.toLowerCase());
 
   useEffect(() => {

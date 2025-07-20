@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
   const hasValidToken = token?.value && token.value.length > 0
   
   // Bypass verification for admin/support accounts
-  const adminEmails = ['admin@itaskorg.com', 'support@itaskorg.com']
+  const adminEmails = ['itaskorg+admin@gmail.com', 'itaskorg+support@gmail.com']
   const isAdminAccount = userEmail?.value && adminEmails.includes(userEmail.value.toLowerCase())
   
   const isEmailVerified = emailVerified?.value === 'true' || isAdminAccount

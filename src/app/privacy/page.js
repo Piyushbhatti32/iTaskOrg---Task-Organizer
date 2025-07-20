@@ -120,7 +120,7 @@ export default function PrivacyPolicy() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">11. Contact Us</h2>
             <p className="text-gray-700 mb-4">
-              If you have any questions about this Privacy Policy, please contact us at: privacy@itaskorg.com
+              If you have any questions about this Privacy Policy, please contact us at: itaskorg+support@gmail.com
             </p>
           </section>
         </div>

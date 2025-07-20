@@ -1,16 +1,13 @@
 // Admin user configuration
 // In a production app, this would be stored in a database or environment variables
 const ADMIN_USERS = [
-  'admin@itaskorb.com',
-  'support@itaskorb.com',
-  // Temporary admin access for testing - replace with your actual email
-  'test@admin.com',  // This allows anyone to test admin features
-  // Add your email here to make yourself an admin
-  // 'your-email@gmail.com'
+  'itaskorg+admin@gmail.com',
+  'itaskorg+support@gmail.com',
+  'piyushbhatt32@gmail.com',
 ];
 
 // Temporary: Allow admin access for anyone during development
-const ALLOW_ALL_ADMINS = true;
+const ALLOW_ALL_ADMINS = false;
 
 // Check if a user is an admin
 export const isAdmin = (user) => {

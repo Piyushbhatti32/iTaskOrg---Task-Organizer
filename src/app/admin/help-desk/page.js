@@ -46,8 +46,8 @@ export default function AdminHelpDeskPage() {
 
   // Admin users - in a real app, this would come from your user management system
   const adminUsers = [
-    { uid: 'admin1', name: 'John Admin', email: 'john@company.com' },
-    { uid: 'admin2', name: 'Jane Support', email: 'jane@company.com' },
+    { uid: 'admin1', name: 'Admin', email: 'itaskorg+admin@gmail.com' },
+    { uid: 'admin2', name: 'Support', email: 'itaskorg+support@gmail.com' },
     { uid: user?.uid, name: user?.displayName || user?.email, email: user?.email }
   ];
 
