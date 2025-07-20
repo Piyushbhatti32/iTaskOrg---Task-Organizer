@@ -3,6 +3,8 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 
 let app;
+let adminDb;
+let adminAuth;
 
 if (getApps().length === 0) {
   try {
@@ -50,16 +52,26 @@ if (getApps().length === 0) {
     }
     
     app = initializeApp(firebaseAdminConfig);
+    adminDb = getFirestore(app);
+    adminAuth = getAuth(app);
     console.log('Firebase Admin SDK initialized successfully');
   } catch (error) {
     console.error('Error initializing Firebase Admin SDK:', error);
-    throw error;
+    // Set to null to indicate initialization failure
+    app = null;
+    adminDb = null;
+    adminAuth = null;
   }
 } else {
   app = getApps()[0];
+  try {
+    adminDb = getFirestore(app);
+    adminAuth = getAuth(app);
+  } catch (error) {
+    console.error('Error getting Firebase services:', error);
+    adminDb = null;
+    adminAuth = null;
+  }
 }
-
-const adminDb = getFirestore(app);
-const adminAuth = getAuth(app);
 
 export { adminDb, adminAuth };

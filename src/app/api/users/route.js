@@ -3,6 +3,15 @@ import { adminDb } from '@/config/firebase-admin';
 
 export async function GET(request) {
   try {
+    // Check if Firebase Admin is properly initialized
+    if (!adminDb) {
+      console.error('Firebase Admin SDK not initialized');
+      return NextResponse.json(
+        { error: 'Database connection not available' },
+        { status: 503 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const searchQuery = searchParams.get('q') || '';
     const limit = parseInt(searchParams.get('limit') || '10');
