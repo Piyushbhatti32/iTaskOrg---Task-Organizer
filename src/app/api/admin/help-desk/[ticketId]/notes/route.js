@@ -1,5 +1,5 @@
-import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { db } from '../../../../../../config/firebase';
+import { adminDb } from '../../../../../../config/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(req, { params }) {
   try {
@@ -14,17 +14,17 @@ export async function POST(req, { params }) {
       createdAt: new Date().toISOString()
     };
 
-    const docRef = doc(db, 'helpDeskTickets', ticketId);
+    const docRef = adminDb.collection('helpDeskTickets').doc(ticketId);
     
     // Check if ticket exists
-    const docSnap = await getDoc(docRef);
-    if (!docSnap.exists()) {
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
       return new Response(JSON.stringify({ error: 'Ticket not found' }), { status: 404 });
     }
 
     // Add the note to the ticket
-    await updateDoc(docRef, {
-      notes: arrayUnion(noteData),
+    await docRef.update({
+      notes: FieldValue.arrayUnion(noteData),
       updatedAt: new Date().toISOString()
     });
 
