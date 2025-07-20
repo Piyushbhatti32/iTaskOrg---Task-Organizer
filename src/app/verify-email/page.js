@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { sendEmailVerification } from 'firebase/auth';
 
 export default function VerifyEmail() {
   const { user, loading } = useAuth();
@@ -48,11 +49,27 @@ export default function VerifyEmail() {
       setResendDisabled(true);
       setCountdown(60); // 60 seconds cooldown
 
-      await user.sendEmailVerification();
+      console.log('Attempting to send email verification to:', user.email);
+      await sendEmailVerification(user);
+      console.log('Email verification sent successfully');
       
       // Show success message or handle UI feedback
     } catch (error) {
-      setError('Failed to resend verification email. Please try again later.');
+      console.error('Firebase sendEmailVerification error:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      
+      // Provide more specific error messages based on Firebase error codes
+      let errorMessage = 'Failed to resend verification email. Please try again later.';
+      if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many requests. Please wait a moment before trying again.';
+      } else if (error.code === 'auth/requires-recent-login') {
+        errorMessage = 'Please log in again to resend the verification email.';
+      } else if (error.code === 'auth/invalid-api-key') {
+        errorMessage = 'Configuration error. Please contact support.';
+      }
+      
+      setError(errorMessage);
       setResendDisabled(false);
       setCountdown(0);
     }
