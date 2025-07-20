@@ -579,7 +579,7 @@ export default function ProfilePage() {
 
   const handleProfileUpdate = (updates) => {
     if (user && user.uid) {
-      updateProfile(user.uid, updates);
+      updateProfile(updates);
     } else {
       console.error('User not authenticated');
     }
