@@ -11,6 +11,50 @@ export function useWebSocket(teamIds) {
   const reconnectTimeoutRef = useRef(null);
   const typingTimeoutRef = useRef({});
 
+  // Handle incoming WebSocket messages
+  const handleWebSocketMessage = useCallback((data) => {
+    switch (data.type) {
+      case 'presence':
+        setTeamPresence(prev => ({
+          ...prev,
+          [data.userId]: {
+            status: data.status,
+            timestamp: data.timestamp
+          }
+        }));
+        break;
+
+      case 'typing':
+        const { userId, teamId, isTyping } = data;
+        if (isTyping) {
+          setTypingUsers(prev => ({
+            ...prev,
+            [teamId]: [...(prev[teamId] || []), userId]
+          }));
+          // Clear typing status after 3 seconds
+          if (typingTimeoutRef.current[`${teamId}-${userId}`]) {
+            clearTimeout(typingTimeoutRef.current[`${teamId}-${userId}`]);
+          }
+          typingTimeoutRef.current[`${teamId}-${userId}`] = setTimeout(() => {
+            setTypingUsers(prev => ({
+              ...prev,
+              [teamId]: (prev[teamId] || []).filter(id => id !== userId)
+            }));
+          }, 3000);
+        } else {
+          setTypingUsers(prev => ({
+            ...prev,
+            [teamId]: (prev[teamId] || []).filter(id => id !== userId)
+          }));
+        }
+        break;
+
+      default:
+        // Handle other message types in the component using this hook
+        break;
+    }
+  }, []);
+
   // Connect to WebSocket
   useEffect(() => {
     if (!user || !teamIds.length) return;
@@ -71,50 +115,6 @@ export function useWebSocket(teamIds) {
       });
     };
   }, [user, teamIds, handleWebSocketMessage]);
-
-  // Handle incoming WebSocket messages
-  const handleWebSocketMessage = useCallback((data) => {
-    switch (data.type) {
-      case 'presence':
-        setTeamPresence(prev => ({
-          ...prev,
-          [data.userId]: {
-            status: data.status,
-            timestamp: data.timestamp
-          }
-        }));
-        break;
-
-      case 'typing':
-        const { userId, teamId, isTyping } = data;
-        if (isTyping) {
-          setTypingUsers(prev => ({
-            ...prev,
-            [teamId]: [...(prev[teamId] || []), userId]
-          }));
-          // Clear typing status after 3 seconds
-          if (typingTimeoutRef.current[`${teamId}-${userId}`]) {
-            clearTimeout(typingTimeoutRef.current[`${teamId}-${userId}`]);
-          }
-          typingTimeoutRef.current[`${teamId}-${userId}`] = setTimeout(() => {
-            setTypingUsers(prev => ({
-              ...prev,
-              [teamId]: (prev[teamId] || []).filter(id => id !== userId)
-            }));
-          }, 3000);
-        } else {
-          setTypingUsers(prev => ({
-            ...prev,
-            [teamId]: (prev[teamId] || []).filter(id => id !== userId)
-          }));
-        }
-        break;
-
-      default:
-        // Handle other message types in the component using this hook
-        break;
-    }
-  }, []);
 
   // Send message through WebSocket
   const sendMessage = useCallback((type, data) => {

@@ -153,8 +153,10 @@ function NavigationLinks({ pathname, user }) {
 function MobileHeader({ onMenuClick, user }) {
   const { isDark } = useTheme();
   const pathname = usePathname();
+  const profile = useProfile();
   
   const currentPage = navLinks.find(link => link.href === pathname);
+  const displayName = profile.name || user.displayName || 'User';
   
   if (!user || pathname.startsWith('/login')) {
     return null;
@@ -180,17 +182,25 @@ function MobileHeader({ onMenuClick, user }) {
         
         <Link href="/profile" className="flex items-center">
         <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white overflow-hidden">
-          {user.photoURL ? (
+          {profile.avatar ? (
+            <Image 
+              src={profile.avatar} 
+              alt={displayName} 
+              width={32}
+              height={32}
+              className="w-full h-full object-cover"
+            />
+          ) : user.photoURL ? (
             <Image 
               src={user.photoURL} 
-              alt={user.displayName || 'Profile'} 
+              alt={displayName} 
               width={32}
               height={32}
               className="w-full h-full object-cover"
             />
           ) : (
             <span className="text-sm font-medium">
-              {user.displayName?.charAt(0) || <User className="w-4 h-4" />}
+              {displayName.charAt(0) || <User className="w-4 h-4" />}
             </span>
           )}
         </div>
@@ -352,6 +362,7 @@ function DesktopNavigationSidebar() {
 // Main layout component
 function AppLayout({ children }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { loading, user } = useAuth();
   const { isDark } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -360,6 +371,13 @@ function AppLayout({ children }) {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
+
+  // Authentication guard - redirect unauthenticated users
+  useEffect(() => {
+    if (!loading && !user && !pathname.startsWith('/login')) {
+      router.push('/login');
+    }
+  }, [loading, user, pathname, router]);
 
   // Close mobile menu on window resize to desktop size
   useEffect(() => {
