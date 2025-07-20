@@ -23,6 +23,12 @@ import {
  * Generic CRUD operations
  */
 export const createDocument = async (collectionName, id, data) => {
+  if (!id || typeof id !== 'string') {
+    throw new Error(`Invalid document ID provided: ${id}`);
+  }
+  if (!collectionName || typeof collectionName !== 'string') {
+    throw new Error(`Invalid collection name provided: ${collectionName}`);
+  }
   const docRef = doc(db, collectionName, id);
   await setDoc(docRef, {
     ...data,
@@ -47,6 +53,10 @@ export const deleteDocument = async (collectionName, id) => {
 };
 
 export const getDocument = async (collectionName, id) => {
+  if (!id || typeof id !== 'string') {
+    console.warn(`Invalid document ID provided: ${id}`);
+    return null;
+  }
   const docRef = doc(db, collectionName, id);
   const docSnap = await getDoc(docRef);
   return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;

@@ -410,6 +410,7 @@ export function AuthProvider({ children }) {
     logout,
     resetPassword,
     reloadUser,
+    clearError,
     isRedirectResultChecked
   };
 

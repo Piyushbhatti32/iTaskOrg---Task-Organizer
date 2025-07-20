@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
+import { adminDb } from '../../../config/firebase-admin';
 
-// Simple REST API for team communications
-// In production, consider using Socket.IO or similar for real-time features
-
-// Mock data stores (in production, use a real database)
-const presenceStore = new Map();
-const messagesStore = new Map();
+// Team communications API with Firebase backend
 
 // Get user presence
 export async function GET(request) {
@@ -20,16 +16,20 @@ export async function GET(request) {
 
     // Return team presence or specific user presence
     if (userId) {
-      const presence = presenceStore.get(userId) || { status: 'offline' };
+      const presenceDoc = await adminDb.collection('presence').doc(userId).get();
+      const presence = presenceDoc.exists ? presenceDoc.data() : { status: 'offline' };
       return NextResponse.json({ presence });
     }
 
     // Return all team member presence
+    const presenceQuery = adminDb.collection('presence')
+      .where('teams', 'array-contains', teamId);
+    
+    const presenceSnapshot = await presenceQuery.get();
     const teamPresence = {};
-    presenceStore.forEach((presence, id) => {
-      if (presence.teams && presence.teams.includes(teamId)) {
-        teamPresence[id] = presence;
-      }
+    
+    presenceSnapshot.docs.forEach(doc => {
+      teamPresence[doc.id] = doc.data();
     });
 
     return NextResponse.json({ teamPresence });
@@ -52,10 +52,11 @@ export async function POST(request) {
       userId,
       teams: teamIds,
       status,
-      lastSeen: new Date().toISOString()
+      lastSeen: new Date()
     };
 
-    presenceStore.set(userId, presenceData);
+    // Update presence in Firestore
+    await adminDb.collection('presence').doc(userId).set(presenceData, { merge: true });
 
     return NextResponse.json({ success: true, presence: presenceData });
   } catch (error) {

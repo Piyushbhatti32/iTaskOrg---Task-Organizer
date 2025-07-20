@@ -123,9 +123,15 @@ export const useStore = create(
       },
 
       updateTask: async (updatedTask) => {
+        if (!updatedTask?.id) {
+          throw new Error('Task ID is required for updates');
+        }
+        
         try {
-          // Update in Firebase
-          await updateTask(updatedTask.id, updatedTask);
+          // Update in Firebase - import function with alias to avoid collision
+          const { updateTask: updateTaskInDB } = await import('./utils/db');
+          await updateTaskInDB(updatedTask.id, updatedTask);
+          
           // Update local state
           set((state) => ({
             tasks: state.tasks.map((task) =>
@@ -136,7 +142,8 @@ export const useStore = create(
                     schedule: {
                       ...task.schedule,
                       ...(updatedTask.schedule || {})
-                    }
+                    },
+                    updatedAt: new Date().toISOString()
                   }
                 : task
             )
@@ -298,8 +305,15 @@ export const useStore = create(
         }
       },
 
-      // Profile actions
-      updateProfile: async (userId, newProfile) => {
+      // Profile actions - separate sync and async operations
+      updateProfile: (newProfile) => {
+        // Sync operation for immediate UI updates
+        set((state) => ({
+          profile: { ...state.profile, ...newProfile }
+        }));
+      },
+
+      updateProfileAsync: async (userId, newProfile) => {
         try {
           // Update in Firestore
           await createOrUpdateUserProfile(userId, newProfile);

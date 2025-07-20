@@ -3,11 +3,38 @@ import { adminAuth } from '../../../../config/firebase-admin';
 
 export async function POST(request) {
   try {
+    // Verify authentication token first
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Missing authentication token' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.split('Bearer ')[1];
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    
+    // Verify that the requester is admin
+    const adminEmails = ['itaskorg+admin@gmail.com', 'itaskorg+support@gmail.com'];
+    if (!adminEmails.includes(decodedToken.email?.toLowerCase())) {
+      return NextResponse.json(
+        { error: 'Forbidden - Admin access required' },
+        { status: 403 }
+      );
+    }
+    
     const { email, uid } = await request.json();
     
-    // Check if this is an admin/support account
-    const adminEmails = ['itaskorg+admin@gmail.com', 'itaskorg+support@gmail.com'];
+    // Validate input
+    if (!email || !uid) {
+      return NextResponse.json(
+        { error: 'Email and UID are required' },
+        { status: 400 }
+      );
+    }
     
+    // Check if this is an admin/support account to be verified
     if (!adminEmails.includes(email.toLowerCase())) {
       return NextResponse.json(
         { error: 'Only admin/support accounts can be manually verified' },

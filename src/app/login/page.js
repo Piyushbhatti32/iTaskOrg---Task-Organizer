@@ -519,8 +519,7 @@ export default function LoginPage() {
       console.error("Google sign in failed:", error);
       setRedirecting(false);
       setRedirectAttempts(0);
-      // Show error message to user
-      setError('Failed to sign in with Google. Please try again.');
+      // Error is already handled by the googleSignIn function in AuthContext
     } finally {
       setGoogleLoading(false);
     }

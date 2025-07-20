@@ -59,6 +59,9 @@ export function useWebSocket(teamIds) {
   useEffect(() => {
     if (!user || !teamIds.length) return;
 
+    // Copy ref values to avoid stale closure issues
+    const currentTypingTimeouts = typingTimeoutRef.current;
+
     const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/ws?userId=${user.uid}&teamIds=${teamIds.join(',')}`;
     const ws = new WebSocket(wsUrl);
 
@@ -110,7 +113,8 @@ export function useWebSocket(teamIds) {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      Object.values(typingTimeoutRef.current).forEach(timeout => {
+      // Use the copied ref value to avoid stale closure issues
+      Object.values(currentTypingTimeouts).forEach(timeout => {
         clearTimeout(timeout);
       });
     };

@@ -1,10 +1,5 @@
 import { NextResponse } from 'next/server';
-
-// Simple REST API for notifications
-// In production, consider using Socket.IO or similar for real-time features
-
-// Mock notifications store (in production, use a real database)
-const notificationsStore = new Map();
+import { adminDb } from '../../../../config/firebase-admin';
 
 // Get notifications for a user
 export async function GET(request) {
@@ -17,11 +12,20 @@ export async function GET(request) {
       return new Response('User ID is required', { status: 400 });
     }
 
-    // Get user's notifications
-    const userNotifications = notificationsStore.get(userId) || [];
-    const filteredNotifications = userNotifications.filter(n => n.status === status);
+    // Get user's notifications from Firestore
+    let notificationsQuery = adminDb.collection('notifications')
+      .where('userId', '==', userId)
+      .where('status', '==', status)
+      .orderBy('createdAt', 'desc')
+      .limit(50);
+    
+    const snapshot = await notificationsQuery.get();
+    const notifications = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
 
-    return NextResponse.json({ notifications: filteredNotifications });
+    return NextResponse.json({ notifications });
   } catch (error) {
     console.error('Error fetching notifications:', error);
     return new Response('Failed to fetch notifications', { status: 500 });
@@ -38,23 +42,22 @@ export async function POST(request) {
     }
 
     const notification = {
-      id: Date.now().toString(),
       userId,
       type,
       title,
       message: message || '',
       data: data || {},
       status: 'unread',
-      createdAt: new Date().toISOString()
+      createdAt: new Date()
     };
 
-    // Store notification
-    if (!notificationsStore.has(userId)) {
-      notificationsStore.set(userId, []);
-    }
-    notificationsStore.get(userId).push(notification);
+    // Store notification in Firestore
+    const docRef = await adminDb.collection('notifications').add(notification);
 
-    return NextResponse.json({ success: true, notification });
+    return NextResponse.json({ 
+      success: true, 
+      notification: { id: docRef.id, ...notification }
+    });
   } catch (error) {
     console.error('Error creating notification:', error);
     return new Response('Failed to create notification', { status: 500 });
@@ -70,15 +73,23 @@ export async function PUT(request) {
       return new Response('Missing required fields', { status: 400 });
     }
 
-    const userNotifications = notificationsStore.get(userId) || [];
-    const notificationIndex = userNotifications.findIndex(n => n.id === notificationId);
+    // Update notification in Firestore
+    const notificationRef = adminDb.collection('notifications').doc(notificationId);
+    const notificationDoc = await notificationRef.get();
     
-    if (notificationIndex === -1) {
+    if (!notificationDoc.exists) {
       return new Response('Notification not found', { status: 404 });
     }
+    
+    // Verify notification belongs to the user
+    if (notificationDoc.data().userId !== userId) {
+      return new Response('Unauthorized', { status: 403 });
+    }
 
-    userNotifications[notificationIndex].status = status;
-    notificationsStore.set(userId, userNotifications);
+    await notificationRef.update({ 
+      status, 
+      updatedAt: new Date() 
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

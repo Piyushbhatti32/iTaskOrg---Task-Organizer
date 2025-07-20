@@ -38,15 +38,38 @@ export async function GET(request) {
     }
 
     const teamsRef = collection(db, 'teams');
-    const q = query(teamsRef, where('members', 'array-contains', userId));
-    const querySnapshot = await getDocs(q);
-
+    // Query for teams where user is either a member or leader
+    const memberQuery = query(teamsRef, where(`members.${userId}`, '!=', null));
+    const leaderQuery = query(teamsRef, where('leaderId', '==', userId));
+    
+    const [memberSnapshot, leaderSnapshot] = await Promise.all([
+      getDocs(memberQuery),
+      getDocs(leaderQuery)
+    ]);
+    
+    const teamIds = new Set();
     const teams = [];
-    querySnapshot.forEach((doc) => {
-      teams.push({
-        id: doc.id,
-        ...doc.data()
-      });
+
+    // Process member teams
+    memberSnapshot.forEach((doc) => {
+      if (!teamIds.has(doc.id)) {
+        teamIds.add(doc.id);
+        teams.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      }
+    });
+    
+    // Process leader teams
+    leaderSnapshot.forEach((doc) => {
+      if (!teamIds.has(doc.id)) {
+        teamIds.add(doc.id);
+        teams.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      }
     });
 
     return NextResponse.json({ teams });
@@ -76,20 +99,18 @@ export async function POST(request) {
       description,
       leaderId,
       tasks: [],
+      members: {
+        [leaderId]: {
+          role: 'leader',
+          joinedAt: serverTimestamp()
+        }
+      },
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
 
     const teamsRef = collection(db, 'teams');
     const docRef = await addDoc(teamsRef, teamData);
-
-    // Add the leader as a member in the members subcollection
-    const memberRef = doc(db, 'teams', docRef.id, 'members', leaderId);
-    await setDoc(memberRef, {
-      userId: leaderId,
-      role: 'leader',
-      joinedAt: serverTimestamp()
-    });
 
     return NextResponse.json({
       id: docRef.id,
