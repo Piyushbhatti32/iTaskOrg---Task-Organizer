@@ -11,7 +11,12 @@ export default function VerifyEmail() {
   const [resendDisabled, setResendDisabled] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [error, setError] = useState('');
+  const [manualVerifying, setManualVerifying] = useState(false);
   const redirectPath = searchParams.get('from') || '/tasks';
+  
+  // Check if this is an admin account
+  const adminEmails = ['admin@itaskorg.com', 'support@itaskorg.com'];
+  const isAdminAccount = user?.email && adminEmails.includes(user.email.toLowerCase());
 
   useEffect(() => {
     // If user is not logged in, redirect to login
@@ -63,6 +68,41 @@ export default function VerifyEmail() {
     });
   };
 
+  const handleManualVerification = async () => {
+    if (!isAdminAccount) return;
+    
+    try {
+      setManualVerifying(true);
+      setError('');
+      
+      const response = await fetch('/api/admin/verify-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user.email,
+          uid: user.uid
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        // Set the verification cookie and redirect
+        document.cookie = 'email-verified=true; path=/; max-age=31536000; SameSite=Lax';
+        router.push(redirectPath);
+      } else {
+        setError(result.error || 'Failed to verify account');
+      }
+    } catch (error) {
+      setError('Failed to verify admin account. Please try again.');
+      console.error('Manual verification error:', error);
+    } finally {
+      setManualVerifying(false);
+    }
+  };
+
   if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -109,19 +149,42 @@ export default function VerifyEmail() {
               I&apos;ve Verified My Email
             </button>
 
-            <button
-              onClick={handleResendEmail}
-              disabled={resendDisabled}
-              className={`w-full flex justify-center py-3 px-4 border border-gray-300 rounded-xl shadow-lg text-sm font-medium transition-all duration-300 ${
-                resendDisabled
-                  ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 hover:scale-[1.02] active:scale-[0.98]'
-              }`}
-            >
-              {resendDisabled
-                ? `Resend Email (${countdown}s)`
-                : 'Resend Verification Email'}
-            </button>
+            {!isAdminAccount && (
+              <button
+                onClick={handleResendEmail}
+                disabled={resendDisabled}
+                className={`w-full flex justify-center py-3 px-4 border border-gray-300 rounded-xl shadow-lg text-sm font-medium transition-all duration-300 ${
+                  resendDisabled
+                    ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 hover:scale-[1.02] active:scale-[0.98]'
+                }`}
+              >
+                {resendDisabled
+                  ? `Resend Email (${countdown}s)`
+                  : 'Resend Verification Email'}
+              </button>
+            )}
+            
+            {isAdminAccount && (
+              <button
+                onClick={handleManualVerification}
+                disabled={manualVerifying}
+                className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-lg text-sm font-medium transition-all duration-300 ${
+                  manualVerifying
+                    ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-green-600 to-blue-600 text-white hover:from-green-700 hover:to-blue-700 hover:scale-[1.02] active:scale-[0.98]'
+                }`}
+              >
+                {manualVerifying ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Verifying Admin Account...
+                  </>
+                ) : (
+                  'Verify Admin Account'
+                )}
+              </button>
+            )}
           </div>
 
           <div className="text-center text-sm text-gray-500">

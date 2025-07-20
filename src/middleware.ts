@@ -17,13 +17,21 @@ export async function middleware(request: NextRequest) {
   // Get the token and email verification status from cookies
   const token = request.cookies.get('auth-token')
   const emailVerified = request.cookies.get('email-verified')
+  const userEmail = request.cookies.get('user-email')
   console.log('Middleware - Auth token present:', !!token);
   console.log('Middleware - Email verified:', !!emailVerified);
+  console.log('Middleware - User email:', userEmail?.value);
 
   // Check if token exists and is valid
   const hasValidToken = token?.value && token.value.length > 0
-  const isEmailVerified = emailVerified?.value === 'true'
+  
+  // Bypass verification for admin/support accounts
+  const adminEmails = ['admin@itaskorg.com', 'support@itaskorg.com']
+  const isAdminAccount = userEmail?.value && adminEmails.includes(userEmail.value.toLowerCase())
+  
+  const isEmailVerified = emailVerified?.value === 'true' || isAdminAccount
   console.log('Middleware - Has valid token:', hasValidToken);
+  console.log('Middleware - Is admin account:', isAdminAccount);
   console.log('Middleware - Email is verified:', isEmailVerified);
 
   // If it's a protected route and user is not authenticated,

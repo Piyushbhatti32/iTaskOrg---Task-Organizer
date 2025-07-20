@@ -66,6 +66,8 @@ export function AuthProvider({ children }) {
       if (!user) {
         console.log('Removing auth cookie');
         document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
+        document.cookie = 'user-email=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
+        document.cookie = 'email-verified=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
         return;
       }
 
@@ -73,17 +75,35 @@ export function AuthProvider({ children }) {
       const token = await user.getIdToken(true); // Force token refresh
       const maxAge = remember ? 7 * 24 * 60 * 60 : 3600; // 7 days if remember, 1 hour if not
       
-      // Set cookie with less strict SameSite policy
+      // Check if this is an admin/support account
+      const adminEmails = ['admin@itaskorg.com', 'support@itaskorg.com'];
+      const isAdminAccount = adminEmails.includes(user.email.toLowerCase());
+      const isEmailVerified = user.emailVerified || isAdminAccount;
+      
+      // Set auth token cookie
       document.cookie = `auth-token=${token}; path=/; max-age=${maxAge}; SameSite=Lax`;
+      
+      // Set user email cookie (for middleware)
+      document.cookie = `user-email=${user.email}; path=/; max-age=${maxAge}; SameSite=Lax`;
+      
+      // Set email verification status
+      document.cookie = `email-verified=${isEmailVerified}; path=/; max-age=${maxAge}; SameSite=Lax`;
+      
+      if (isAdminAccount) {
+        console.log('Admin account detected - bypassing email verification');
+      }
       
       // Verify cookie was set
       const cookieCheck = document.cookie.includes('auth-token=');
       console.log('Cookie set verification:', cookieCheck);
+      console.log('Email verification status:', isEmailVerified);
       
       if (!cookieCheck) {
         console.warn('Cookie may not have been set properly');
         // Fallback cookie setting
         document.cookie = `auth-token=${token}; path=/`;
+        document.cookie = `user-email=${user.email}; path=/`;
+        document.cookie = `email-verified=${isEmailVerified}; path=/`;
       }
     } catch (error) {
       console.error('Error setting auth cookie:', error);
