@@ -25,7 +25,7 @@ export default function TermsOfService() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Acceptance of Terms</h2>
             <p className="text-gray-700 mb-4">
-              By accessing and using iTaskOrg ("the Service"), you accept and agree to be bound by the terms and provision of this agreement.
+              By accessing and using iTaskOrg (&quot;the Service&quot;), you accept and agree to be bound by the terms and provision of this agreement.
             </p>
           </section>
 
@@ -85,7 +85,7 @@ export default function TermsOfService() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">8. Limitation of Liability</h2>
             <p className="text-gray-700 mb-4">
-              The Service is provided "as is" without warranties of any kind. We shall not be liable for any indirect, incidental, special, or consequential damages.
+              The Service is provided &quot;as is&quot; without warranties of any kind. We shall not be liable for any indirect, incidental, special, or consequential damages.
             </p>
           </section>
 
