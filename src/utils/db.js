@@ -367,4 +367,71 @@ export const getUserNotifications = async (userId, filters = {}) => {
 
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-}; 
+};
+
+/**
+ * Template operations
+ */
+export const createTemplate = async (userId, data) => {
+  const templateRef = doc(collection(db, 'templates'));
+  await setDoc(templateRef, {
+    ...data,
+    userId,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+  return templateRef;
+};
+
+export const updateTemplate = async (templateId, data) => {
+  return updateDocument('templates', templateId, data);
+};
+
+export const deleteTemplate = async (templateId) => {
+  return deleteDocument('templates', templateId);
+};
+
+export const getTemplate = async (templateId) => {
+  return getDocument('templates', templateId);
+};
+
+export const getUserTemplates = async (userId, filters = {}) => {
+  const { limit: queryLimit = 20, lastDoc } = filters;
+  
+  let q = query(
+    collection(db, 'templates'),
+    where('userId', '==', userId),
+    orderBy('createdAt', 'desc'),
+    limit(queryLimit)
+  );
+  
+  if (lastDoc) q = query(q, startAfter(lastDoc));
+
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};
+
+/**
+ * Settings operations
+ */
+export const createOrUpdateUserSettings = async (userId, settings) => {
+  const settingsRef = doc(db, 'userSettings', userId);
+  await setDoc(settingsRef, {
+    ...settings,
+    userId,
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+  return settingsRef;
+};
+
+export const getUserSettings = async (userId) => {
+  return getDocument('userSettings', userId);
+};
+
+export const updateUserSettings = async (userId, settings) => {
+  return updateDocument('userSettings', userId, settings);
+};
+
+export const deleteUserSettings = async (userId) => {
+  return deleteDocument('userSettings', userId);
+};

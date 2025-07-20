@@ -70,7 +70,7 @@ export function useWebSocket(teamIds) {
         clearTimeout(timeout);
       });
     };
-  }, [user, teamIds.join(','), socket === null]);
+  }, [user, teamIds, handleWebSocketMessage]);
 
   // Handle incoming WebSocket messages
   const handleWebSocketMessage = useCallback((data) => {

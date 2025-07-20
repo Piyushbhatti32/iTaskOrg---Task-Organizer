@@ -54,7 +54,7 @@ export function useNotifications() {
         ws.close();
       }
     };
-  }, [user, socket === null]);
+  }, [user]);
 
   // Mark notification as read
   const markAsRead = useCallback(async (notificationId) => {

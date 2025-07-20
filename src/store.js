@@ -1,8 +1,23 @@
 'use client';
 
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
+import { 
+  createTask, 
+  updateTask, 
+  deleteTask, 
+  getUserTasks,
+  createTemplate,
+  updateTemplate,
+  deleteTemplate,
+  getUserTemplates,
+  createOrUpdateUserSettings,
+  getUserSettings,
+  updateUserSettings,
+  createOrUpdateUserProfile,
+  getUserProfile
+} from './utils/db';
 import { useMemo } from 'react';
 
 const initialState = {
@@ -74,58 +89,103 @@ export const useStore = create(
       ...initialState,
 
       // Task actions
-      addTask: (taskData) => set((state) => ({
-        tasks: [
-          ...state.tasks,
-          {
-            id: uuidv4(),
-            title: taskData.title,
-            description: taskData.description || '',
-            dueDate: taskData.dueDate || null,
-            priority: taskData.priority || 'medium',
-            category: taskData.category || '',
-            schedule: {
-              time: taskData.schedule?.time || null,
-              reminder: taskData.schedule?.reminder || false
-            },
-            assignedUsers: Array.isArray(taskData.assignedUsers) ? taskData.assignedUsers : [],
-            completed: false,
-            createdAt: new Date().toISOString(),
-            completedAt: null,
-            subtasks: [],
-            completedPomodoros: 0
-          }
-        ]
-      })),
+      addTask: async (taskData) => {
+        const newTask = {
+          id: uuidv4(),
+          title: taskData.title,
+          description: taskData.description || '',
+          dueDate: taskData.dueDate || null,
+          priority: taskData.priority || 'medium',
+          category: taskData.category || '',
+          schedule: {
+            time: taskData.schedule?.time || null,
+            reminder: taskData.schedule?.reminder || false
+          },
+          assignedUsers: Array.isArray(taskData.assignedUsers) ? taskData.assignedUsers : [],
+          completed: false,
+          createdAt: new Date().toISOString(),
+          completedAt: null,
+          subtasks: [],
+          completedPomodoros: 0
+        };
+        
+        try {
+          // Save to Firebase
+          await createTask(newTask);
+          // Update local state
+          set((state) => ({
+            tasks: [...state.tasks, newTask]
+          }));
+        } catch (error) {
+          console.error('Error creating task:', error);
+          throw error;
+        }
+      },
 
-      updateTask: (updatedTask) => set((state) => ({
-        tasks: state.tasks.map((task) =>
-          task.id === updatedTask.id
-            ? {
-                ...task,
-                ...updatedTask,
-                schedule: {
-                  ...task.schedule,
-                  ...(updatedTask.schedule || {})
-                }
-              }
-            : task
-        )
-      })),
+      updateTask: async (updatedTask) => {
+        try {
+          // Update in Firebase
+          await updateTask(updatedTask.id, updatedTask);
+          // Update local state
+          set((state) => ({
+            tasks: state.tasks.map((task) =>
+              task.id === updatedTask.id
+                ? {
+                    ...task,
+                    ...updatedTask,
+                    schedule: {
+                      ...task.schedule,
+                      ...(updatedTask.schedule || {})
+                    }
+                  }
+                : task
+            )
+          }));
+        } catch (error) {
+          console.error('Error updating task:', error);
+          throw error;
+        }
+      },
 
-      deleteTask: (taskId) => set((state) => ({
-        tasks: state.tasks.filter((task) => task.id !== taskId)
-      })),
+      deleteTask: async (taskId) => {
+        try {
+          // Delete from Firebase
+          await deleteTask(taskId);
+          // Update local state
+          set((state) => ({
+            tasks: state.tasks.filter((task) => task.id !== taskId)
+          }));
+        } catch (error) {
+          console.error('Error deleting task:', error);
+          throw error;
+        }
+      },
 
-      toggleTaskCompletion: (taskId) => set((state) => ({
-        tasks: state.tasks.map((task) =>
-          task.id === taskId ? { 
-            ...task, 
-            completed: !task.completed,
-            completedAt: !task.completed ? new Date().toISOString() : null
-          } : task
-        )
-      })),
+      toggleTaskCompletion: async (taskId) => {
+        const state = get();
+        const task = state.tasks.find(t => t.id === taskId);
+        if (!task) return;
+        
+        const updatedTask = {
+          ...task,
+          completed: !task.completed,
+          completedAt: !task.completed ? new Date().toISOString() : null
+        };
+        
+        try {
+          // Update in Firebase
+          await updateTask(taskId, updatedTask);
+          // Update local state
+          set((state) => ({
+            tasks: state.tasks.map((t) =>
+              t.id === taskId ? updatedTask : t
+            )
+          }));
+        } catch (error) {
+          console.error('Error toggling task completion:', error);
+          throw error;
+        }
+      },
 
       addSubtask: (taskId, subtaskTitle) => set((state) => ({
         tasks: state.tasks.map((task) =>
@@ -170,39 +230,88 @@ export const useStore = create(
       })),
 
       // Template actions
-      addTemplate: (templateData) => set((state) => ({
-        templates: [
-          ...state.templates,
-          {
-            id: uuidv4(),
-            name: templateData.name,
-            description: templateData.description || '',
-            taskTitle: templateData.taskTitle,
-            priority: templateData.priority || 'medium',
-            createdAt: new Date().toISOString()
-          }
-        ]
-      })),
+      addTemplate: async (userId, templateData) => {
+        const newTemplate = {
+          id: uuidv4(),
+          name: templateData.name,
+          description: templateData.description || '',
+          taskTitle: templateData.taskTitle,
+          priority: templateData.priority || 'medium',
+          createdAt: new Date().toISOString()
+        };
+        
+        try {
+          // Save to Firestore
+          await createTemplate(userId, newTemplate);
+          // Update local state
+          set((state) => ({
+            templates: [...state.templates, newTemplate]
+          }));
+        } catch (error) {
+          console.error('Error creating template:', error);
+          throw error;
+        }
+      },
 
-      updateTemplate: (updatedTemplate) => set((state) => ({
-        templates: state.templates.map((template) =>
-          template.id === updatedTemplate.id ? { ...template, ...updatedTemplate } : template
-        )
-      })),
+      updateTemplate: async (updatedTemplate) => {
+        try {
+          // Update in Firestore
+          await updateTemplate(updatedTemplate.id, updatedTemplate);
+          // Update local state
+          set((state) => ({
+            templates: state.templates.map((template) =>
+              template.id === updatedTemplate.id ? { ...template, ...updatedTemplate } : template
+            )
+          }));
+        } catch (error) {
+          console.error('Error updating template:', error);
+          throw error;
+        }
+      },
 
-      deleteTemplate: (templateId) => set((state) => ({
-        templates: state.templates.filter((template) => template.id !== templateId)
-      })),
+      deleteTemplate: async (templateId) => {
+        try {
+          // Delete from Firestore
+          await deleteTemplate(templateId);
+          // Update local state
+          set((state) => ({
+            templates: state.templates.filter((template) => template.id !== templateId)
+          }));
+        } catch (error) {
+          console.error('Error deleting template:', error);
+          throw error;
+        }
+      },
 
       // Settings actions
-      updateSettings: (newSettings) => set((state) => ({
-        settings: { ...state.settings, ...newSettings }
-      })),
+      updateSettings: async (userId, newSettings) => {
+        try {
+          // Update in Firestore
+          await createOrUpdateUserSettings(userId, newSettings);
+          // Update local state
+          set((state) => ({
+            settings: { ...state.settings, ...newSettings }
+          }));
+        } catch (error) {
+          console.error('Error updating settings:', error);
+          throw error;
+        }
+      },
 
       // Profile actions
-      updateProfile: (newProfile) => set((state) => ({
-        profile: { ...state.profile, ...newProfile }
-      })),
+      updateProfile: async (userId, newProfile) => {
+        try {
+          // Update in Firestore
+          await createOrUpdateUserProfile(userId, newProfile);
+          // Update local state
+          set((state) => ({
+            profile: { ...state.profile, ...newProfile }
+          }));
+        } catch (error) {
+          console.error('Error updating profile:', error);
+          throw error;
+        }
+      },
 
       // Group actions
       addGroup: (groupData) => set((state) => ({
@@ -362,6 +471,96 @@ export const useStore = create(
           }, {});
       },
 
+      // Load tasks from Firestore
+      loadTasks: async (userId) => {
+        try {
+          const firestoreTasks = await getUserTasks(userId);
+          set((state) => ({
+            tasks: firestoreTasks
+          }));
+        } catch (error) {
+          console.error('Error loading tasks:', error);
+          throw error;
+        }
+      },
+
+      // Load templates from Firestore
+      loadTemplates: async (userId) => {
+        try {
+          const firestoreTemplates = await getUserTemplates(userId);
+          set((state) => ({
+            templates: firestoreTemplates
+          }));
+        } catch (error) {
+          console.error('Error loading templates:', error);
+          throw error;
+        }
+      },
+
+      // Load settings from Firestore
+      loadSettings: async (userId) => {
+        try {
+          const firestoreSettings = await getUserSettings(userId);
+          if (firestoreSettings) {
+            set((state) => ({
+              settings: { ...state.settings, ...firestoreSettings }
+            }));
+          }
+        } catch (error) {
+          console.error('Error loading settings:', error);
+          throw error;
+        }
+      },
+
+      // Load profile from Firestore
+      loadProfile: async (userId) => {
+        try {
+          const firestoreProfile = await getUserProfile(userId);
+          if (firestoreProfile) {
+            set((state) => ({
+              profile: { ...state.profile, ...firestoreProfile }
+            }));
+          }
+        } catch (error) {
+          console.error('Error loading profile:', error);
+          throw error;
+        }
+      },
+
+      // Load all user data from Firestore
+      loadAllUserData: async (userId) => {
+        try {
+          const [tasks, templates, settings, profile] = await Promise.all([
+            getUserTasks(userId).catch(err => {
+              console.error('Error loading tasks:', err);
+              return [];
+            }),
+            getUserTemplates(userId).catch(err => {
+              console.error('Error loading templates:', err);
+              return [];
+            }),
+            getUserSettings(userId).catch(err => {
+              console.error('Error loading settings:', err);
+              return null;
+            }),
+            getUserProfile(userId).catch(err => {
+              console.error('Error loading profile:', err);
+              return null;
+            })
+          ]);
+
+          set((state) => ({
+            tasks,
+            templates,
+            settings: settings ? { ...state.settings, ...settings } : state.settings,
+            profile: profile ? { ...state.profile, ...profile } : state.profile
+          }));
+        } catch (error) {
+          console.error('Error loading user data:', error);
+          throw error;
+        }
+      },
+
       // Reset action
       reset: () => set(initialState)
     }),
@@ -466,6 +665,15 @@ export const useTasks = () => {
   const tasks = useStore((state) => state.tasks);
   return useMemo(() => Array.isArray(tasks) ? tasks : [], [tasks]);
 };
+
+// Hook to load tasks from Firestore
+export const useLoadTasks = () => useStore((state) => state.loadTasks);
+
+// Hooks to load all data from Firestore
+export const useLoadTemplates = () => useStore((state) => state.loadTemplates);
+export const useLoadSettings = () => useStore((state) => state.loadSettings);
+export const useLoadProfile = () => useStore((state) => state.loadProfile);
+export const useLoadAllUserData = () => useStore((state) => state.loadAllUserData);
 
 // Alternative: If you still want a single hook that returns all actions, use useMemo
 export const useTaskActions = () => {

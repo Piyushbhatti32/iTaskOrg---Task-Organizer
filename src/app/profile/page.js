@@ -578,7 +578,11 @@ export default function ProfilePage() {
   const [showDebugInfo, setShowDebugInfo] = useState(false);
 
   const handleProfileUpdate = (updates) => {
-    updateProfile(updates);
+    if (user && user.uid) {
+      updateProfile(user.uid, updates);
+    } else {
+      console.error('User not authenticated');
+    }
   };
 
   const handleAvatarChange = () => {

@@ -6,6 +6,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import './globals.css';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
+import TaskLoader from '../components/TaskLoader';
+import { useProfile } from '../store';
 import { LogOut, User, Menu, X, Shield } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 import { isAdmin } from '../utils/roles';
@@ -27,25 +29,43 @@ const navLinks = [
 // User profile section component
 function UserProfile({ user }) {
   const { isDark } = useTheme();
+  const profile = useProfile();
+  
+  const displayName = profile.name || user.displayName || 'User';
   const avatarContent = useMemo(() => {
     if (!user) return <User className="w-5 h-5" />;
-    if (user.photoURL) {
+    if (profile.avatar) {
       return (
         <Image 
-          src={user.photoURL} 
-          alt={user.displayName || 'Profile'} 
+          src={profile.avatar} 
+          alt={displayName} 
           width={40}
           height={40}
           className="w-full h-full object-cover"
           onError={(e) => {
             e.target.style.display = 'none';
-            e.target.parentElement.innerHTML = user.displayName?.charAt(0) || '<User className="w-5 h-5" />';
+            e.target.parentElement.innerHTML = displayName.charAt(0) || '<User className="w-5 h-5" />';
           }}
         />
       );
     }
-    return user.displayName?.charAt(0) || <User className="w-5 h-5" />;
-  }, [user]);
+    if (user.photoURL) {
+      return (
+        <Image 
+          src={user.photoURL} 
+          alt={displayName} 
+          width={40}
+          height={40}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.target.style.display = 'none';
+            e.target.parentElement.innerHTML = displayName.charAt(0) || '<User className="w-5 h-5" />';
+          }}
+        />
+      );
+    }
+    return displayName.charAt(0) || <User className="w-5 h-5" />;
+  }, [user, profile.avatar, displayName]);
 
   if (!user) return null;
 
@@ -59,7 +79,7 @@ function UserProfile({ user }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className={`font-medium ${isDark ? 'text-gray-100' : 'text-gray-900'} truncate`}>
-          {user.displayName || 'User'}
+          {displayName}
         </div>
         <div className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'} truncate`}>
           {user.email}
@@ -185,7 +205,10 @@ function MobileNavOverlay({ isOpen, onClose, user }) {
   const pathname = usePathname();
   const { isDark } = useTheme();
   const { logout } = useAuth();
+  const profile = useProfile();
   const router = useRouter();
+  
+  const displayName = profile.name || user.displayName || 'User';
   
   const handleLogout = async () => {
     try {
@@ -231,21 +254,29 @@ function MobileNavOverlay({ isOpen, onClose, user }) {
           className={`p-4 border-b ${isDark ? 'border-gray-800 hover:bg-gray-900' : 'border-gray-200 hover:bg-gray-50'} flex items-center gap-3 transition-colors`}
         >
           <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white overflow-hidden">
-            {user.photoURL ? (
+            {profile.avatar ? (
+              <Image 
+                src={profile.avatar} 
+                alt={displayName} 
+                width={40}
+                height={40}
+                className="w-full h-full object-cover"
+              />
+            ) : user.photoURL ? (
               <Image 
                 src={user.photoURL} 
-                alt={user.displayName || 'Profile'} 
+                alt={displayName} 
                 width={40}
                 height={40}
                 className="w-full h-full object-cover"
               />
             ) : (
-              user.displayName?.charAt(0) || <User className="w-5 h-5" />
+              displayName.charAt(0) || <User className="w-5 h-5" />
             )}
           </div>
           <div className="flex-1 min-w-0">
             <div className={`font-medium ${isDark ? 'text-gray-100' : 'text-gray-900'} truncate`}>
-              {user.displayName || 'User'}
+              {displayName}
             </div>
             <div className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'} truncate`}>
               {user.email}
@@ -395,10 +426,12 @@ export default function ClientLayout({ children }) {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <AppLayout>
-          {children}
-        </AppLayout>
+        <TaskLoader>
+          <AppLayout>
+            {children}
+          </AppLayout>
+        </TaskLoader>
       </ThemeProvider>
     </AuthProvider>
   );
-} 
+}
