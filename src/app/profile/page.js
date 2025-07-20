@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { User, Mail, Globe, MapPin, Calendar, Trophy, TrendingUp, Activity, Settings, Camera, Edit3, Save, X, Loader2 } from 'lucide-react';
 import { useTasks, useProfile, useUpdateProfile } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
+import { updateUserProfile } from '../../utils/db';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useProfileImage } from '../../hooks/useProfileImage';
 import Image from 'next/image';
@@ -148,6 +149,7 @@ function ProfileHeader({ profile, onEdit }) {
 // Enhanced Profile Form with Modal
 function ProfileForm({ profile, onUpdate, isOpen, onClose }) {
   const { isDark } = useTheme();
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: profile.name || '',
     email: profile.email || '',
@@ -156,13 +158,48 @@ function ProfileForm({ profile, onUpdate, isOpen, onClose }) {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Update form data when profile changes
+  useEffect(() => {
+    setFormData({
+      name: profile.name || '',
+      email: profile.email || '',
+      bio: profile.bio || '',
+      timezone: profile.timezone || 'UTC'
+    });
+  }, [profile]);
 
   const handleSubmit = async () => {
+    if (!user) {
+      setError('User not authenticated');
+      return;
+    }
+
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
-    onUpdate(formData);
-    setIsLoading(false);
-    onClose();
+    setError('');
+    
+    try {
+      // Save to Firebase
+      await updateUserProfile(user.uid, {
+        name: formData.name,
+        displayName: formData.name, // Also update displayName for consistency
+        bio: formData.bio,
+        timezone: formData.timezone
+        // Note: we don't update email here as it requires special handling in Firebase Auth
+      });
+      
+      // Update local store
+      onUpdate(formData);
+      
+      console.log('Profile updated successfully');
+      onClose();
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setError('Failed to save profile changes. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -256,6 +293,12 @@ function ProfileForm({ profile, onUpdate, isOpen, onClose }) {
                 <option value="Asia/Tokyo">Tokyo</option>
               </select>
             </div>
+
+            {error && (
+              <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg mb-4">
+                {error}
+              </div>
+            )}
 
             <div className="flex gap-3 pt-4">
               <button

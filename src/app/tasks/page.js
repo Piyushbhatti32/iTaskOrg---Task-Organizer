@@ -6,6 +6,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import Link from 'next/link';
 import { Calendar, Clock, Tag, Flag, AlignLeft, Plus, Edit2, Trash2, CheckCircle, ChevronDown, ChevronUp, FileText, Users } from 'lucide-react';
 import UserAssignmentField from '../../components/tasks/UserAssignmentField';
+import { sendTaskCompletionNotification } from '../../utils/notifications';
 
 // Enhanced Task input form for adding new tasks
 function TaskInput({ onAdd }) {
@@ -305,7 +306,9 @@ function Subtasks({ task }) {
 export default function TasksPage() {
   const [isClient, setIsClient] = useState(false);
   const tasks = useUncompletedTasks();
-  const { addTask, updateTask, deleteTask, toggleTaskCompletion } = useTaskActions();
+const { addTask, updateTask, deleteTask, toggleTaskCompletion } = useTaskActions();
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [currentTaskId, setCurrentTaskId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const { isDark } = useTheme();
@@ -375,6 +378,28 @@ export default function TasksPage() {
     }
   };
 
+// Handle toggle task completion with confirmation
+  const handleToggleTaskCompletion = (taskId) => {
+    setCurrentTaskId(taskId);
+    setShowConfirmation(true);
+  };
+
+  const confirmToggleCompletion = () => {
+    if (currentTaskId !== null) {
+      toggleTaskCompletion(currentTaskId);
+      // Show success notification
+      // Implement toast or notification logic here
+      sendTaskCompletionNotification(currentTaskId);
+    }
+    setShowConfirmation(false);
+    setCurrentTaskId(null);
+  };
+
+  const cancelToggleCompletion = () => {
+    setShowConfirmation(false);
+    setCurrentTaskId(null);
+  };
+
   return (
     <div className="max-w-4xl mx-auto py-4 lg:py-8 px-4">
       <div className="relative">
@@ -385,7 +410,14 @@ export default function TasksPage() {
       
       <TaskInput onAdd={addTask} />
       
-      <div className="space-y-4">
+    {showConfirmation && (
+      <div className="confirmation-dialog">
+        <p>Are you sure you want to mark this task as completed?</p>
+        <button onClick={confirmToggleCompletion}>Yes</button>
+        <button onClick={cancelToggleCompletion}>No</button>
+      </div>
+    )}
+    <div className="space-y-4">
         {tasks.length === 0 && (
             <div className={`text-center py-16 ${isDark ? 'bg-gray-900/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl border ${isDark ? 'border-gray-700/50' : 'border-white/20'} shadow-xl`}>
               <div className="text-gray-400 text-7xl mb-6 animate-bounce">📝</div>
@@ -403,7 +435,7 @@ export default function TasksPage() {
                 <div className="p-5">
               <div className="flex items-start sm:items-center gap-3">
                 <button
-                  onClick={() => toggleTaskCompletion(task.id)}
+onClick={() => handleToggleTaskCompletion(task.id)}
                   className={`mt-1 sm:mt-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 flex-shrink-0 ${
                     task.completed
                       ? 'bg-gradient-to-r from-blue-500 to-purple-500 border-transparent scale-105'

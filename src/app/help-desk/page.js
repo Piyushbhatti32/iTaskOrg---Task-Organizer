@@ -25,6 +25,8 @@ export default function HelpDeskPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [createdTicketNumber, setCreatedTicketNumber] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Form state
   const [newTicket, setNewTicket] = useState({
@@ -116,13 +118,21 @@ export default function HelpDeskPage() {
         }),
       });
 
-      if (response.ok) {
+      const result = await response.json();
+
+      if (response.ok && result.success) {
         setNewTicket({ title: '', description: '', priority: 'medium', category: 'general' });
         setShowCreateModal(false);
+        setCreatedTicketNumber(result.ticketNumber);
+        setShowSuccessModal(true);
         fetchTickets();
+      } else {
+        console.error('Error creating ticket:', result.error || 'Unknown error');
+        alert('Error creating ticket: ' + (result.error || 'Unknown error'));
       }
     } catch (error) {
       console.error('Error creating ticket:', error);
+      alert('Error creating ticket. Please try again.');
     } finally {
       setCreating(false);
     }

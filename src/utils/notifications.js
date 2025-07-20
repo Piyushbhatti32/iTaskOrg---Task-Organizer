@@ -124,6 +124,45 @@ export async function sendTeamInvitationNotification(invitedUserId, teamName, in
 }
 
 /**
+ * Send a task completion notification
+ * @param {string} userId - The ID of the user who completed the task
+ * @param {string} taskTitle - The title of the completed task
+ * @param {string} taskId - Optional task ID for linking
+ */
+export async function sendTaskCompletionNotification(userId, taskTitle, taskId = null) {
+  try {
+    const notificationData = {
+      recipientId: userId,
+      type: 'task',
+      title: '✅ Task Completed!',
+      message: `Great job! You've completed: "${taskTitle}"`,
+      senderName: 'System',
+      data: {
+        taskTitle,
+        taskId,
+        type: 'task_completion',
+        link: '/completed'
+      }
+    };
+
+    const response = await fetch('/api/notifications/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(notificationData)
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send notification');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error sending task completion notification:', error);
+    throw error;
+  }
+}
+
+/**
  * Send a custom notification
  * @param {string} recipientId - The ID of the user receiving the notification
  * @param {string} type - The type of notification (task, team, group, system)

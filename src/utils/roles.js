@@ -1,6 +1,7 @@
 // Admin user configuration
 // In a production app, this would be stored in a database or environment variables
 const ADMIN_USERS = [
+  'itaskorg@gmail.com',
   'itaskorg+admin@gmail.com',
   'itaskorg+support@gmail.com',
   'piyushbhatt32@gmail.com',

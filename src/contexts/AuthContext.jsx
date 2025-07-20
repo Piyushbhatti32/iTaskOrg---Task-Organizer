@@ -18,7 +18,7 @@ import {
 } from "firebase/auth";
 import { auth } from "../config/firebase";
 import { useStore } from "../store";
-import { createOrUpdateUserProfile } from "../utils/db";
+import { createOrUpdateUserProfile, getUserProfile } from "../utils/db";
 
 const AuthContext = createContext();
 
@@ -34,30 +34,52 @@ export function AuthProvider({ children }) {
   const updateProfile = useStore(state => state.updateProfile);
 
   // Sync user profile data with store
-  const syncUserProfile = (user) => {
+  const syncUserProfile = async (user) => {
     if (!user) return;
     console.log('Syncing user profile:', user.email);
 
-    const profileData = {
-      name: user.displayName || '',
-      email: user.email || '',
-      joinDate: user.metadata.creationTime,
-      lastSignIn: user.metadata.lastSignInTime,
-      emailVerified: user.emailVerified,
-      providerId: user.providerData[0]?.providerId || 'email'
-    };
+    try {
+      // Load complete profile from Firebase
+      const userProfile = await getUserProfile(user.uid);
+      
+      const profileData = {
+        name: userProfile?.name || userProfile?.displayName || user.displayName || '',
+        email: user.email || '',
+        bio: userProfile?.bio || '',
+        timezone: userProfile?.timezone || 'UTC',
+        joinDate: user.metadata.creationTime,
+        lastSignIn: user.metadata.lastSignInTime,
+        emailVerified: user.emailVerified,
+        providerId: user.providerData[0]?.providerId || 'email'
+      };
 
-    // Get current profile to check existing avatar
-    const currentProfile = useStore.getState().profile;
-    
-    // Only set photoURL as avatar if there's no existing avatar
-    if (!currentProfile.avatar && user.photoURL) {
-      profileData.avatar = user.photoURL;
-    } else if (currentProfile.avatar) {
-      profileData.avatar = currentProfile.avatar;
+      // Handle avatar - prioritize Firebase profile, then user photoURL
+      if (userProfile?.avatar) {
+        profileData.avatar = userProfile.avatar;
+      } else if (user.photoURL) {
+        profileData.avatar = user.photoURL;
+      } else {
+        profileData.avatar = '';
+      }
+
+      updateProfile(profileData);
+      console.log('Profile synced successfully');
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      // Fallback to basic profile data from Firebase Auth
+      const basicProfileData = {
+        name: user.displayName || '',
+        email: user.email || '',
+        bio: '',
+        timezone: 'UTC',
+        joinDate: user.metadata.creationTime,
+        lastSignIn: user.metadata.lastSignInTime,
+        emailVerified: user.emailVerified,
+        providerId: user.providerData[0]?.providerId || 'email',
+        avatar: user.photoURL || ''
+      };
+      updateProfile(basicProfileData);
     }
-
-    updateProfile(profileData);
   };
 
   // Set auth cookie with proper expiration
@@ -356,18 +378,39 @@ export function AuthProvider({ children }) {
     setError(null);
   };
 
+  const reloadUser = async () => {
+    if (!user) return;
+    
+    try {
+      console.log('Reloading user to check email verification...');
+      await user.reload();
+      
+      // The onAuthStateChanged listener will pick up the changes automatically
+      // But we can also manually update the state to ensure immediate feedback
+      const updatedUser = auth.currentUser;
+      if (updatedUser) {
+        setUser(updatedUser);
+        syncUserProfile(updatedUser);
+        await setAuthCookie(updatedUser);
+        console.log('User reloaded, email verified:', updatedUser.emailVerified);
+      }
+    } catch (error) {
+      console.error('Error reloading user:', error);
+    }
+  };
+
   const value = {
     user,
+    loading,
+    error,
     login,
     signUp,
     googleSignIn,
     githubSignIn,
-    resetPassword,
     logout,
-    error,
-    loading,
-    clearError,
-    isRedirectResultChecked,
+    resetPassword,
+    reloadUser,
+    isRedirectResultChecked
   };
 
   return (

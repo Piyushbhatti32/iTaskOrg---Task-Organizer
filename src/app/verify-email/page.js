@@ -6,13 +6,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { sendEmailVerification } from 'firebase/auth';
 
 export default function VerifyEmail() {
-  const { user, loading } = useAuth();
+  const { user, loading, reloadUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [resendDisabled, setResendDisabled] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [error, setError] = useState('');
   const [manualVerifying, setManualVerifying] = useState(false);
+  const [checking, setChecking] = useState(false);
   const redirectPath = searchParams.get('from') || '/tasks';
   
   // Check if this is an admin account
@@ -75,14 +76,31 @@ export default function VerifyEmail() {
     }
   };
 
-  const handleRefresh = () => {
-    // Reload the user to check verification status
-    user.reload().then(() => {
-      if (user.emailVerified) {
-        document.cookie = 'email-verified=true; path=/; max-age=31536000; SameSite=Lax';
-        router.push(redirectPath);
-      }
-    });
+  const handleRefresh = async () => {
+    try {
+      setChecking(true);
+      setError('');
+      
+      // Reload the user using the context method to ensure state is updated
+      await reloadUser();
+      
+      // Small delay to ensure state is updated
+      setTimeout(() => {
+        // Check if the email is verified and redirect
+        if (user?.emailVerified || isAdminAccount) {
+          document.cookie = 'email-verified=true; path=/; max-age=31536000; SameSite=Lax';
+          router.push(redirectPath);
+        } else {
+          setError('Email is not yet verified. Please check your email and click the verification link.');
+        }
+        setChecking(false);
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Error checking email verification:', error);
+      setError('Failed to check email verification status. Please try again.');
+      setChecking(false);
+    }
   };
 
   const handleManualVerification = async () => {
