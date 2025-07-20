@@ -7,7 +7,7 @@ export async function middleware(request: NextRequest) {
   console.log('Middleware - Current path:', path);
 
   // Array of routes that don't require authentication
-  const publicRoutes = ['/login', '/register', '/reset-password', '/verify-email']
+  const publicRoutes = ['/login', '/register', '/reset-password', '/verify-email', '/terms', '/privacy']
   const isPublicRoute = publicRoutes.some(route => path.startsWith(route))
 
   // Array of routes that require authentication
@@ -48,8 +48,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // If user is authenticated and trying to access public pages,
-  // redirect to tasks page
-  if (isPublicRoute && hasValidToken && isEmailVerified && path !== '/verify-email') {
+  // redirect to tasks page (except for terms, privacy, and verify-email)
+  if (isPublicRoute && hasValidToken && isEmailVerified && 
+      !['/verify-email', '/terms', '/privacy'].some(route => path.startsWith(route))) {
     console.log('Middleware - Redirecting to tasks, user is authenticated');
     return NextResponse.redirect(new URL('/tasks', request.url))
   }
@@ -80,6 +81,8 @@ export const config = {
     '/register',
     '/reset-password',
     '/verify-email',
+    '/terms',
+    '/privacy',
     '/tasks/:path*',
     '/calendar/:path*',
     '/stats/:path*',

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff, User, CheckCircle, AlertCircle, ArrowRight, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
@@ -621,13 +622,13 @@ export default function LoginPage() {
         <div className="text-center text-sm text-gray-500 mt-8">
           <p>
             By continuing, you agree to our{" "}
-            <a href="#" className="text-blue-600 hover:text-blue-800 font-medium">
+            <Link href="/terms" className="text-blue-600 hover:text-blue-800 font-medium">
               Terms of Service
-            </a>{" "}
+            </Link>{" "}
             and{" "}
-            <a href="#" className="text-blue-600 hover:text-blue-800 font-medium">
+            <Link href="/privacy" className="text-blue-600 hover:text-blue-800 font-medium">
               Privacy Policy
-            </a>
+            </Link>
           </p>
         </div>
       </div>
