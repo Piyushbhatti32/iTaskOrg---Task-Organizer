@@ -1,25 +1,30 @@
-import { createDocument } from '../../../utils/db';
-import { collection, getDocs, orderBy, query, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../../../config/firebase';
+import { adminDb } from '../../../config/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
-// Function to generate next ticket number
+// Function to generate next ticket number using Admin SDK
 async function generateTicketNumber() {
-  const counterRef = doc(db, 'counters', 'helpDeskTickets');
+  if (!adminDb) {
+    throw new Error('Firebase Admin SDK not initialized');
+  }
+  
+  const counterRef = adminDb.collection('counters').doc('helpDeskTickets');
   
   try {
-    const counterDoc = await getDoc(counterRef);
-    let nextNumber = 1;
-    
-    if (counterDoc.exists()) {
-      nextNumber = (counterDoc.data().count || 0) + 1;
-      await updateDoc(counterRef, { count: nextNumber });
-    } else {
-      await setDoc(counterRef, { count: nextNumber });
-    }
+    const result = await adminDb.runTransaction(async (transaction) => {
+      const counterDoc = await transaction.get(counterRef);
+      let nextNumber = 1;
+      
+      if (counterDoc.exists) {
+        nextNumber = (counterDoc.data().count || 0) + 1;
+      }
+      
+      transaction.set(counterRef, { count: nextNumber }, { merge: true });
+      return nextNumber;
+    });
     
     // Format ticket number as HD-YYYY-NNNN (e.g., HD-2024-0001)
     const year = new Date().getFullYear();
-    const paddedNumber = nextNumber.toString().padStart(4, '0');
+    const paddedNumber = result.toString().padStart(4, '0');
     return `HD-${year}-${paddedNumber}`;
   } catch (error) {
     console.error('Error generating ticket number:', error);
@@ -63,12 +68,23 @@ export async function POST(req) {
     const ticketId = `ticket_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     console.log('Creating ticket with ID:', ticketId);
     
-    const docRef = await createDocument('helpDeskTickets', ticketId, newTicket);
-    console.log('Ticket created successfully:', docRef.id);
+    // Create ticket using Admin SDK
+    if (!adminDb) {
+      throw new Error('Firebase Admin SDK not initialized');
+    }
+    
+    const ticketRef = adminDb.collection('helpDeskTickets').doc(ticketId);
+    await ticketRef.set({
+      ...newTicket,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    });
+    
+    console.log('Ticket created successfully:', ticketId);
 
     return new Response(JSON.stringify({ 
       message: 'Ticket created successfully',
-      ticketId: docRef.id,
+      ticketId: ticketId,
       ticketNumber,
       success: true
     }), {
@@ -94,11 +110,12 @@ export async function POST(req) {
 
 export async function GET() {
   try {
-    const ticketsQuery = query(
-      collection(db, 'helpDeskTickets'),
-      orderBy('createdAt', 'desc')
-    );
-    const snapshot = await getDocs(ticketsQuery);
+    if (!adminDb) {
+      throw new Error('Firebase Admin SDK not initialized');
+    }
+    
+    const ticketsRef = adminDb.collection('helpDeskTickets');
+    const snapshot = await ticketsRef.orderBy('createdAt', 'desc').get();
     const tickets = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
     return new Response(JSON.stringify(tickets), {

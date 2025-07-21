@@ -14,149 +14,79 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
     
-    function isTeamMember(teamId) {
+    function isAdmin() {
       return isAuthenticated() && 
-        exists(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid));
+        request.auth.token.email in ['itaskorg@gmail.com', 'itaskorg+admin@gmail.com', 'itaskorg+support@gmail.com'];
     }
     
-    function isTeamLeader(teamId) {
-      return isAuthenticated() && 
-        get(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)).data.role == 'leader';
-    }
-    
-    function isGroupMember(groupId) {
-      return isAuthenticated() && 
-        exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
-    }
-    
-    function isGroupAdmin(groupId) {
-      return isAuthenticated() && 
-        get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)).data.role == 'admin';
-    }
-    
-    function isTaskParticipant(taskData) {
-      return isAuthenticated() && (
-        request.auth.uid == taskData.createdBy ||
-        request.auth.uid == taskData.assignedTo ||
-        (taskData.teamId != null && isTeamMember(taskData.teamId)) ||
-        (taskData.groupId != null && isGroupMember(taskData.groupId))
-      );
-    }
-
-    // Users collection
+    // Users collection - allow authenticated users to read all users for search/assignment
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isOwner(userId);
-      allow update: if isAuthenticated() && isOwner(userId);
-      allow delete: if false; // Prevent user deletion through client
+      allow write: if isAuthenticated() && (isOwner(userId) || isAdmin());
     }
     
-    // Tasks collection
+    // Tasks collection - simplified permissions
     match /tasks/{taskId} {
-      allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.assignedTo ||
-        request.auth.uid == resource.data.createdBy ||
-        (resource.data.teamId != null && isTeamMember(resource.data.teamId)) ||
-        (resource.data.groupId != null && isGroupMember(resource.data.groupId))
-      );
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (
-        request.auth.uid == resource.data.assignedTo ||
-        request.auth.uid == resource.data.createdBy ||
-        (resource.data.teamId != null && isTeamMember(resource.data.teamId)) ||
-        (resource.data.groupId != null && isGroupMember(resource.data.groupId))
-      );
-      allow delete: if isAuthenticated() && (
-        request.auth.uid == resource.data.createdBy ||
-        (resource.data.teamId != null && isTeamLeader(resource.data.teamId)) ||
-        (resource.data.groupId != null && isGroupAdmin(resource.data.groupId))
-      );
+      allow read, write: if isAuthenticated();
     }
     
     // Teams collection
     match /teams/{teamId} {
-      allow read: if isTeamMember(teamId);
-      allow create: if isAuthenticated() && isEmailVerified();
-      allow update: if isTeamLeader(teamId);
-      allow delete: if isTeamLeader(teamId);
+      allow read, write: if isAuthenticated();
       
       // Team members subcollection
       match /members/{memberId} {
-        allow read: if isTeamMember(teamId);
-        allow write: if isTeamLeader(teamId);
+        allow read, write: if isAuthenticated();
       }
       
       // Team tasks subcollection
       match /tasks/{taskId} {
-        allow read: if isTeamMember(teamId);
-        allow create: if isTeamLeader(teamId);
-        allow update: if isTeamLeader(teamId) || (isTeamMember(teamId) && request.auth.uid == resource.data.assignedTo);
-        allow delete: if isTeamLeader(teamId);
+        allow read, write: if isAuthenticated();
       }
     }
     
     // Groups collection
     match /groups/{groupId} {
-      allow read: if isGroupMember(groupId);
-      allow create: if isAuthenticated() && isEmailVerified();
-      allow update: if isGroupAdmin(groupId);
-      allow delete: if isGroupAdmin(groupId);
+      allow read, write: if isAuthenticated();
       
       // Group members subcollection
       match /members/{memberId} {
-        allow read: if isGroupMember(groupId);
-        allow write: if isGroupAdmin(groupId);
+        allow read, write: if isAuthenticated();
       }
     }
     
     // Messages collection
     match /messages/{messageId} {
-      allow read: if isAuthenticated() && (
-        (resource.data.teamId != null && isTeamMember(resource.data.teamId)) ||
-        (resource.data.groupId != null && isGroupMember(resource.data.groupId))
-      );
-      allow create: if isAuthenticated() && isEmailVerified();
-      allow update: if isAuthenticated() && request.auth.uid == resource.data.createdBy;
-      allow delete: if isAuthenticated() && (
-        request.auth.uid == resource.data.createdBy ||
-        (resource.data.teamId != null && isTeamLeader(resource.data.teamId)) ||
-        (resource.data.groupId != null && isGroupAdmin(resource.data.groupId))
-      );
+      allow read, write: if isAuthenticated();
     }
     
     // Notifications collection
     match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId;
-      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow read, write: if isAuthenticated();
     }
     
     // Templates collection
     match /templates/{templateId} {
-      allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId;
-      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow read, write: if isAuthenticated();
     }
     
     // User Settings collection
     match /userSettings/{userId} {
-      allow read: if isAuthenticated() && isOwner(userId);
-      allow write: if isAuthenticated() && isOwner(userId);
+      allow read, write: if isAuthenticated();
     }
     
-    // Help Desk / Support Tickets collection
+    // Help Desk Tickets collection (both names for compatibility)
+    match /helpDeskTickets/{ticketId} {
+      allow read, write: if isAuthenticated();
+    }
+    
     match /supportTickets/{ticketId} {
-      allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.userId ||
-        request.auth.token.email in ['itaskorg+admin@gmail.com', 'itaskorg+support@gmail.com']
-      );
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (
-        request.auth.uid == resource.data.userId ||
-        request.auth.token.email in ['itaskorg+admin@gmail.com', 'itaskorg+support@gmail.com']
-      );
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Counters collection for generating ticket numbers
+    match /counters/{counterId} {
+      allow read, write: if isAuthenticated();
     }
   }
 }

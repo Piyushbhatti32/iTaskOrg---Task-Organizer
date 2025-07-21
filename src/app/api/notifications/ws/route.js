@@ -16,14 +16,20 @@ export async function GET(request) {
     let notificationsQuery = adminDb.collection('notifications')
       .where('userId', '==', userId)
       .where('status', '==', status)
-      .orderBy('createdAt', 'desc')
       .limit(50);
     
     const snapshot = await notificationsQuery.get();
-    const notifications = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    const notifications = snapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      // Sort by createdAt in descending order (newest first)
+      .sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0);
+        const dateB = new Date(b.createdAt || 0);
+        return dateB - dateA;
+      });
 
     return NextResponse.json({ notifications });
   } catch (error) {

@@ -32,6 +32,7 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState(null);
   const [isRedirectResultChecked, setIsRedirectResultChecked] = useState(false);
   const updateProfile = useStore(state => state.updateProfile);
+  const loadAllUserData = useStore(state => state.loadAllUserData);
 
   // Sync user profile data with store
   const syncUserProfile = async (user) => {
@@ -233,6 +234,14 @@ export function AuthProvider({ children }) {
       setUser(userCredential.user);
       syncUserProfile(userCredential.user);
       await setAuthCookie(userCredential.user, remember);
+      
+      // Load all user data from Firestore
+      try {
+        await loadAllUserData(userCredential.user.uid);
+        console.log('User data loaded successfully');
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
     } catch (error) {
       console.error('Login error:', error);
       setError(error.message);
@@ -359,6 +368,9 @@ export function AuthProvider({ children }) {
           monthlyProgress: []
         }
       });
+      
+      // Clear localStorage to prevent stale data
+      localStorage.removeItem('itaskorg-storage');
       
       // Remove auth cookie with proper attributes
       document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Strict; Secure';

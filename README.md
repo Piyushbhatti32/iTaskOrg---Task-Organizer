@@ -36,7 +36,8 @@ A modern, feature-rich task management application built with Next.js and Tailwi
   - Time tracking analytics
 
 - ⚙️ **Customization**
-  - Light/Dark theme
+  - Light/Dark theme with dynamic accent colors
+  - 8 beautiful accent color themes (Blue, Purple, Green, Red, Yellow, Pink, Indigo, Teal)
   - Notification preferences
   - Timer settings
   - Profile management
@@ -120,7 +121,8 @@ For static hosting without server-side features:
 ## Tech Stack
 
 - **Framework**: Next.js 14
-- **Styling**: Tailwind CSS
+- **Backend**: Firebase (Firestore, Authentication)
+- **Styling**: Tailwind CSS with dynamic theming
 - **State Management**: Zustand
 - **Date Handling**: date-fns
 - **UI Components**: Custom components with Tailwind
@@ -130,12 +132,86 @@ For static hosting without server-side features:
 ```
 itaskorg/
 ├── src/
-│   ├── app/                 # Next.js app router pages
+│   ├── app/                 # Next.js app router pages and API routes
 │   ├── components/          # Reusable UI components
+│   ├── contexts/            # React contexts (Theme, etc.)
 │   ├── store/              # Zustand store and state management
+│   ├── utils/              # Utility functions
 │   └── styles/             # Global styles and Tailwind config
 ├── public/                 # Static assets
-└── docs/                   # Documentation
+└── docs/                   # Documentation and API fixes summary
+```
+
+## Recent Improvements
+
+### Dynamic Theme System
+- Implemented dynamic accent color theming with 8 color options
+- CSS custom properties for seamless theme switching
+- Persistent theme preferences with Firebase integration
+
+### API Optimizations
+- Fixed Firestore composite index issues across all endpoints
+- Improved query performance with client-side sorting fallbacks
+- Enhanced error handling and authentication flows
+- See [API_FIXES_SUMMARY.md](docs/API_FIXES_SUMMARY.md) for detailed changes
+
+### Mobile Experience
+- Fully responsive design optimized for all screen sizes
+- Touch-friendly interface elements
+- Improved navigation and user experience
+
+## Configuration
+
+### Firebase Setup
+
+1. Create a Firebase project at [https://console.firebase.google.com](https://console.firebase.google.com)
+
+2. Enable the following services:
+   - Authentication (Email/Password)
+   - Firestore Database
+
+3. Create a `.env.local` file in the root directory with your Firebase config:
+   ```bash
+   NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+   NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+   ```
+
+### Firestore Security Rules
+
+Apply these security rules to your Firestore database:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can only access their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Tasks are user-specific
+    match /tasks/{taskId} {
+      allow read, write: if request.auth != null && 
+        (resource.data.userId == request.auth.uid || 
+         resource.data.assignedTo == request.auth.uid);
+    }
+    
+    // Templates are user-specific
+    match /templates/{templateId} {
+      allow read, write: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+    
+    // Groups and related collections
+    match /groups/{groupId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid in resource.data.members;
+    }
+  }
+}
 ```
 
 ## Contributing

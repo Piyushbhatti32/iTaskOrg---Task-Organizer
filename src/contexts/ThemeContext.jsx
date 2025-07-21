@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useSettings } from '../store';
+import { auth } from '../config/firebase';
 
 const ThemeContext = createContext();
 
@@ -52,6 +53,9 @@ export function ThemeProvider({ children }) {
 
   // Update accent color when it changes
   useEffect(() => {
+    console.log('ThemeContext - accent color effect triggered');
+    console.log('ThemeContext - settings.accentColor:', settings.accentColor);
+    console.log('ThemeContext - isDark:', isDark);
     setAccentColor(settings.accentColor);
     updateDocumentTheme(isDark, settings.accentColor);
   }, [settings.accentColor, isDark]);
@@ -169,6 +173,7 @@ export function ThemeProvider({ children }) {
   };
 
   const updateDocumentTheme = (dark, accent) => {
+    console.log('ThemeContext - updateDocumentTheme called with:', { dark, accent });
     const root = document.documentElement;
 
     // Apply dark/light theme with improved contrast
@@ -187,23 +192,56 @@ export function ThemeProvider({ children }) {
     }
 
     // Apply accent color CSS variables
-
     const colors = accentColors[accent] || accentColors.blue;
+    console.log('ThemeContext - applying accent color:', accent, colors);
     
     // Set CSS custom properties for the accent color
     Object.entries(colors).forEach(([shade, color]) => {
-      root.style.setProperty(`--color-primary-${shade}`, color);
+      const cssVar = `--color-primary-${shade}`;
+      root.style.setProperty(cssVar, color);
+      console.log('ThemeContext - set CSS var:', cssVar, '=', color);
     });
+    
+    console.log('ThemeContext - theme update complete');
   };
 
-  const toggleTheme = () => {
+  const toggleTheme = async () => {
     const newTheme = isDark ? 'light' : 'dark';
     setIsDark(!isDark);
     updateDocumentTheme(!isDark, accentColor);
     
-    // Update settings store
-    const updateSettings = useSettings.getState().updateSettings;
-    updateSettings({ theme: newTheme });
+    // Update local settings in the store first (immediate UI feedback)
+    const updateLocalSettings = useSettings.getState().updateFocusSettings || (() => {});
+    
+    // Try to sync with server if user is authenticated
+    const user = auth.currentUser;
+    const userId = user?.uid;
+    console.log('ThemeContext - toggleTheme - user object:', user);
+    console.log('ThemeContext - toggleTheme - userId:', userId);
+    console.log('ThemeContext - toggleTheme - userId type:', typeof userId);
+    console.log('ThemeContext - toggleTheme - newTheme:', newTheme);
+    
+    // Try to sync with server if user is authenticated
+    if (user && userId && typeof userId === 'string') {
+      try {
+        const updateSettings = useSettings.getState().updateSettings;
+        await updateSettings(userId, { theme: newTheme });
+        console.log('ThemeContext - toggleTheme - server sync success');
+      } catch (error) {
+        console.error('ThemeContext - toggleTheme - server sync failed (continuing with local change):', error);
+        // Don't throw the error - theme change should still work locally
+      }
+    } else {
+      console.log('ThemeContext - toggleTheme - no authenticated user, saving to localStorage only');
+    }
+    
+    // Always store in localStorage as fallback
+    try {
+      localStorage.setItem('theme-preference', newTheme);
+      console.log('ThemeContext - toggleTheme - saved to localStorage');
+    } catch (e) {
+      console.warn('Could not save theme to localStorage:', e);
+    }
   };
 
   const setTheme = (theme) => {

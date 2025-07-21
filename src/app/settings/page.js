@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useSettings, useUpdateSettings } from '../../store';
 import { useTheme } from '../../contexts/ThemeContext';
+import { auth } from '../../config/firebase';
 
 // Theme settings component
 function ThemeSettings({ settings, onUpdate }) {
@@ -212,10 +213,24 @@ export default function SettingsPage() {
     setCurrentSettings(settings || defaultSettings);
   }, [settings, defaultSettings]); // Include defaultSettings as dependency
 
-  const handleUpdate = (updates) => {
+  const handleUpdate = async (updates) => {
     const newSettings = { ...currentSettings, ...updates };
     setCurrentSettings(newSettings);
-    updateSettings(newSettings);
+    
+    // Get current user and call updateSettings with userId
+    const user = auth.currentUser;
+    if (user && user.uid) {
+      try {
+        await updateSettings(user.uid, newSettings);
+        console.log('Settings updated successfully');
+      } catch (error) {
+        console.error('Failed to update settings:', error);
+        // Could show a toast notification here
+      }
+    } else {
+      console.warn('No authenticated user, settings saved locally only');
+      // Settings are still updated in local state
+    }
   };
 
   return (

@@ -106,7 +106,7 @@ function TaskInput({ onAdd }) {
               <select
                 value={selectedTemplate?.id || ''}
                 onChange={(e) => handleTemplateSelect(e.target.value)}
-                className={`w-full pl-10 pr-4 py-2.5 border ${isDark ? 'border-gray-700 bg-gray-800/50 text-gray-100' : 'border-gray-200 bg-white/50 text-gray-900'} rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none transition-all duration-300`}
+                className={`w-full pl-10 pr-4 py-2.5 border ${isDark ? 'border-gray-700 bg-gray-800/50 text-gray-100' : 'border-gray-200 bg-white/50 text-gray-900'} rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none transition-all duration-300`}
               >
                 <option value="">Select a template...</option>
                 {templates.map(template => (
@@ -135,7 +135,7 @@ function TaskInput({ onAdd }) {
               value={formData.description}
               onChange={e => updateFormData('description', e.target.value)}
               placeholder="Add details about your task..."
-              className={`w-full border ${isDark ? 'border-gray-700 bg-gray-800/50 text-gray-100 placeholder:text-gray-500' : 'border-gray-200 bg-white/50 text-gray-900 placeholder:text-gray-400'} rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300`}
+              className={`w-full border ${isDark ? 'border-gray-700 bg-gray-800/50 text-gray-100 placeholder:text-gray-500' : 'border-gray-200 bg-white/50 text-gray-900 placeholder:text-gray-400'} rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300`}
               rows="3"
             />
           </div>
@@ -162,7 +162,7 @@ function TaskInput({ onAdd }) {
                   type="time"
                   value={formData.schedule.time}
                   onChange={e => updateFormData('schedule', { ...formData.schedule, time: e.target.value })}
-                  className={`w-full pl-10 pr-4 py-2.5 border ${isDark ? 'border-gray-700 bg-gray-800/50 text-gray-100' : 'border-gray-200 bg-white/50 text-gray-900'} rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300`}
+                  className={`w-full pl-10 pr-4 py-2.5 border ${isDark ? 'border-gray-700 bg-gray-800/50 text-gray-100' : 'border-gray-200 bg-white/50 text-gray-900'} rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300`}
                 />
               </div>
             </div>
@@ -176,7 +176,7 @@ function TaskInput({ onAdd }) {
                   value={formData.category}
                   onChange={e => updateFormData('category', e.target.value)}
                   placeholder="e.g., Work, Personal, Shopping"
-                  className={`w-full pl-10 pr-4 py-2.5 border ${isDark ? 'border-gray-700 bg-gray-800/50 text-gray-100 placeholder:text-gray-500' : 'border-gray-200 bg-white/50 text-gray-900 placeholder:text-gray-400'} rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300`}
+                  className={`w-full pl-10 pr-4 py-2.5 border ${isDark ? 'border-gray-700 bg-gray-800/50 text-gray-100 placeholder:text-gray-500' : 'border-gray-200 bg-white/50 text-gray-900 placeholder:text-gray-400'} rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300`}
                 />
               </div>
             </div>
@@ -188,7 +188,7 @@ function TaskInput({ onAdd }) {
                 <select
                   value={formData.priority}
                   onChange={e => updateFormData('priority', e.target.value)}
-                  className={`w-full pl-10 pr-4 py-2.5 border ${isDark ? 'border-gray-700 bg-gray-800/50 text-gray-100' : 'border-gray-200 bg-white/50 text-gray-900'} rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none transition-all duration-300`}
+                  className={`w-full pl-10 pr-4 py-2.5 border ${isDark ? 'border-gray-700 bg-gray-800/50 text-gray-100' : 'border-gray-200 bg-white/50 text-gray-900'} rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none transition-all duration-300`}
                 >
                   <option value="low">Low Priority</option>
                   <option value="medium">Medium Priority</option>
@@ -277,7 +277,7 @@ function Subtasks({ task }) {
                 type="checkbox"
                 checked={st.completed}
                 onChange={() => toggleSubtask(task.id, st.id)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 transition-colors peer"
+                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 transition-colors peer"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded opacity-0 peer-checked:opacity-100 transition-opacity duration-300" />
             </div>
@@ -411,10 +411,58 @@ const { addTask, updateTask, deleteTask, toggleTaskCompletion } = useTaskActions
       <TaskInput onAdd={addTask} />
       
     {showConfirmation && (
-      <div className="confirmation-dialog">
-        <p>Are you sure you want to mark this task as completed?</p>
-        <button onClick={confirmToggleCompletion}>Yes</button>
-        <button onClick={cancelToggleCompletion}>No</button>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {/* Backdrop with enhanced blur */}
+        <div 
+          className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity duration-300"
+          onClick={cancelToggleCompletion}
+        />
+        
+        {/* Enhanced Dialog with animations */}
+        <div className={`relative z-10 ${isDark ? 'bg-gray-900' : 'bg-white'} rounded-3xl p-8 max-w-md w-full shadow-2xl transform transition-all duration-300 scale-100 animate-in fade-in zoom-in-95`}>
+          {/* Success animation wrapper */}
+          <div className="text-center mb-6">
+            <div className="relative">
+              {/* Animated rings */}
+              <div className="absolute inset-0 animate-ping">
+                <div className="w-20 h-20 mx-auto bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full"></div>
+              </div>
+              <div className="relative w-20 h-20 mx-auto mb-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg animate-in spin-in-180 duration-500">
+                <CheckCircle className="w-12 h-12 text-white" />
+              </div>
+            </div>
+            <h3 className={`text-2xl font-bold mb-3 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+              Complete Task?
+            </h3>
+            <p className={`${isDark ? 'text-gray-300' : 'text-gray-600'} text-base leading-relaxed max-w-sm mx-auto`}>
+              Great job! Are you ready to mark this task as completed? You can always undo this action later.
+            </p>
+          </div>
+          
+          {/* Enhanced buttons with better styling */}
+          <div className="flex gap-3 mt-8">
+            <button
+              onClick={cancelToggleCompletion}
+              className={`flex-1 px-6 py-3 rounded-2xl font-semibold transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] ${
+                isDark 
+                  ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+              }`}
+            >
+              Not Yet
+            </button>
+            <button
+              onClick={confirmToggleCompletion}
+              className="flex-1 px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold hover:shadow-xl hover:shadow-blue-500/25 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden group"
+            >
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                <CheckCircle className="w-5 h-5" />
+                Yes, Complete!
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </button>
+          </div>
+        </div>
       </div>
     )}
     <div className="space-y-4">

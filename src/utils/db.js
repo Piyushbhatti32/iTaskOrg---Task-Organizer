@@ -29,13 +29,24 @@ export const createDocument = async (collectionName, id, data) => {
   if (!collectionName || typeof collectionName !== 'string') {
     throw new Error(`Invalid collection name provided: ${collectionName}`);
   }
-  const docRef = doc(db, collectionName, id);
-  await setDoc(docRef, {
-    ...data,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  });
-  return docRef;
+  
+  // Check if db is initialized
+  if (!db) {
+    throw new Error('Firebase database is not initialized. Please check your Firebase configuration.');
+  }
+  
+  try {
+    const docRef = doc(db, collectionName, id);
+    await setDoc(docRef, {
+      ...data,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    return docRef;
+  } catch (error) {
+    console.error(`Error creating document in ${collectionName}:`, error);
+    throw error;
+  }
 };
 
 export const updateDocument = async (collectionName, id, data) => {

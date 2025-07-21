@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTaskStats } from '../../store';
+import { useTasks } from '../../store';
 import { useTheme } from '../../contexts/ThemeContext';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
 
@@ -124,11 +124,7 @@ function PriorityChart({ tasks, isDark }) {
 
 // Main Statistics page component
 export default function StatsPage() {
-  const tasksRaw = useTaskStats(state => {
-    const tasks = state?.tasks;
-    return Array.isArray(tasks) ? tasks : [];
-  });
-  const tasks = Array.isArray(tasksRaw) ? tasksRaw : [];
+  const tasks = useTasks();
   const [timeRange, setTimeRange] = useState('all'); // 'all', 'week', 'month'
   const { isDark } = useTheme();
 

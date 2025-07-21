@@ -19,6 +19,7 @@ import {
   getUserProfile
 } from './utils/db';
 import { useMemo } from 'react';
+import { auth } from './config/firebase';
 
 const initialState = {
   tasks: [],
@@ -90,32 +91,63 @@ export const useStore = create(
 
       // Task actions
       addTask: async (taskData) => {
-        const newTask = {
-          id: uuidv4(),
-          title: taskData.title,
-          description: taskData.description || '',
-          dueDate: taskData.dueDate || null,
-          priority: taskData.priority || 'medium',
-          category: taskData.category || '',
-          schedule: {
-            time: taskData.schedule?.time || null,
-            reminder: taskData.schedule?.reminder || false
-          },
-          assignedUsers: Array.isArray(taskData.assignedUsers) ? taskData.assignedUsers : [],
-          completed: false,
-          createdAt: new Date().toISOString(),
-          completedAt: null,
-          subtasks: [],
-          completedPomodoros: 0
-        };
+        // Wait for auth state to be ready
+        await new Promise((resolve) => {
+          if (auth.currentUser) {
+            resolve();
+          } else {
+            const unsubscribe = auth.onAuthStateChanged((user) => {
+              if (user) {
+                unsubscribe();
+                resolve();
+              }
+            });
+            // Timeout after 5 seconds
+            setTimeout(() => {
+              unsubscribe();
+              resolve();
+            }, 5000);
+          }
+        });
+        
+        const user = auth.currentUser;
+        if (!user) {
+          console.error('Authentication state:', {
+            currentUser: auth.currentUser,
+            authReady: !!auth.currentUser
+          });
+          throw new Error('User must be authenticated to create tasks');
+        }
+        
+        console.log('Creating task for user:', user.email);
         
         try {
-          // Save to Firebase
-          await createTask(newTask);
-          // Update local state
+          // Use API route with Admin SDK
+          const response = await fetch('/api/tasks', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              ...taskData,
+              userId: user.uid
+            })
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to create task');
+          }
+          
+          console.log('Task created successfully via API:', result.task.id);
+          
+          // Update local state with the created task
           set((state) => ({
-            tasks: [...state.tasks, newTask]
+            tasks: [...state.tasks, result.task]
           }));
+          
+          return result.task;
         } catch (error) {
           console.error('Error creating task:', error);
           throw error;
@@ -128,26 +160,31 @@ export const useStore = create(
         }
         
         try {
-          // Update in Firebase - import function with alias to avoid collision
-          const { updateTask: updateTaskInDB } = await import('./utils/db');
-          await updateTaskInDB(updatedTask.id, updatedTask);
+          // Use API route with Admin SDK
+          const response = await fetch('/api/tasks', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedTask)
+          });
           
-          // Update local state
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to update task');
+          }
+          
+          console.log('Task updated successfully via API:', result.task.id);
+          
+          // Update local state with the updated task
           set((state) => ({
             tasks: state.tasks.map((task) =>
-              task.id === updatedTask.id
-                ? {
-                    ...task,
-                    ...updatedTask,
-                    schedule: {
-                      ...task.schedule,
-                      ...(updatedTask.schedule || {})
-                    },
-                    updatedAt: new Date().toISOString()
-                  }
-                : task
+              task.id === updatedTask.id ? result.task : task
             )
           }));
+          
+          return result.task;
         } catch (error) {
           console.error('Error updating task:', error);
           throw error;
@@ -156,8 +193,22 @@ export const useStore = create(
 
       deleteTask: async (taskId) => {
         try {
-          // Delete from Firebase
-          await deleteTask(taskId);
+          // Use API route with Admin SDK
+          const response = await fetch(`/api/tasks/${taskId}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to delete task');
+          }
+          
+          console.log('Task deleted successfully via API:', taskId);
+          
           // Update local state
           set((state) => ({
             tasks: state.tasks.filter((task) => task.id !== taskId)
@@ -180,12 +231,27 @@ export const useStore = create(
         };
         
         try {
-          // Update in Firebase
-          await updateTask(taskId, updatedTask);
-          // Update local state
+          // Use API route with Admin SDK
+          const response = await fetch('/api/tasks', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedTask)
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to toggle task completion');
+          }
+          
+          console.log('Task completion toggled successfully via API:', taskId);
+          
+          // Update local state with the updated task
           set((state) => ({
             tasks: state.tasks.map((t) =>
-              t.id === taskId ? updatedTask : t
+              t.id === taskId ? result.task : t
             )
           }));
         } catch (error) {
@@ -194,47 +260,134 @@ export const useStore = create(
         }
       },
 
-      addSubtask: (taskId, subtaskTitle) => set((state) => ({
-        tasks: state.tasks.map((task) =>
-          task.id === taskId
-            ? {
-                ...task,
-                subtasks: [
-                  ...(task.subtasks || []),
-                  {
-                    id: uuidv4(),
-                    title: subtaskTitle,
-                    completed: false
-                  }
-                ]
-              }
-            : task
-        )
-      })),
+      addSubtask: async (taskId, subtaskTitle) => {
+        const state = get();
+        const task = state.tasks.find(t => t.id === taskId);
+        if (!task) return;
+        
+        const updatedTask = {
+          ...task,
+          subtasks: [
+            ...(task.subtasks || []),
+            {
+              id: uuidv4(),
+              title: subtaskTitle,
+              completed: false
+            }
+          ]
+        };
+        
+        try {
+          // Use API route with Admin SDK
+          const response = await fetch('/api/tasks', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedTask)
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to add subtask');
+          }
+          
+          console.log('Subtask added successfully via API:', taskId);
+          
+          // Update local state with the updated task
+          set((state) => ({
+            tasks: state.tasks.map((t) =>
+              t.id === taskId ? result.task : t
+            )
+          }));
+        } catch (error) {
+          console.error('Error adding subtask:', error);
+          throw error;
+        }
+      },
 
-      toggleSubtask: (taskId, subtaskId) => set((state) => ({
-        tasks: state.tasks.map((task) =>
-          task.id === taskId
-            ? {
-                ...task,
-                subtasks: task.subtasks.map((st) =>
-                  st.id === subtaskId ? { ...st, completed: !st.completed } : st
-                )
-              }
-            : task
-        )
-      })),
+      toggleSubtask: async (taskId, subtaskId) => {
+        const state = get();
+        const task = state.tasks.find(t => t.id === taskId);
+        if (!task) return;
+        
+        const updatedTask = {
+          ...task,
+          subtasks: task.subtasks.map((st) =>
+            st.id === subtaskId ? { ...st, completed: !st.completed } : st
+          )
+        };
+        
+        try {
+          // Use API route with Admin SDK
+          const response = await fetch('/api/tasks', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedTask)
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to toggle subtask');
+          }
+          
+          console.log('Subtask toggled successfully via API:', taskId);
+          
+          // Update local state with the updated task
+          set((state) => ({
+            tasks: state.tasks.map((t) =>
+              t.id === taskId ? result.task : t
+            )
+          }));
+        } catch (error) {
+          console.error('Error toggling subtask:', error);
+          throw error;
+        }
+      },
 
-      deleteSubtask: (taskId, subtaskId) => set((state) => ({
-        tasks: state.tasks.map((task) =>
-          task.id === taskId
-            ? {
-                ...task,
-                subtasks: task.subtasks.filter((st) => st.id !== subtaskId)
-              }
-            : task
-        )
-      })),
+      deleteSubtask: async (taskId, subtaskId) => {
+        const state = get();
+        const task = state.tasks.find(t => t.id === taskId);
+        if (!task) return;
+        
+        const updatedTask = {
+          ...task,
+          subtasks: task.subtasks.filter((st) => st.id !== subtaskId)
+        };
+        
+        try {
+          // Use API route with Admin SDK
+          const response = await fetch('/api/tasks', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedTask)
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to delete subtask');
+          }
+          
+          console.log('Subtask deleted successfully via API:', taskId);
+          
+          // Update local state with the updated task
+          set((state) => ({
+            tasks: state.tasks.map((t) =>
+              t.id === taskId ? result.task : t
+            )
+          }));
+        } catch (error) {
+          console.error('Error deleting subtask:', error);
+          throw error;
+        }
+      },
 
       // Template actions
       addTemplate: async (userId, templateData) => {
@@ -248,12 +401,32 @@ export const useStore = create(
         };
         
         try {
-          // Save to Firestore
-          await createTemplate(userId, newTemplate);
+          // Use API route with Admin SDK
+          const response = await fetch('/api/templates', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              ...newTemplate,
+              userId: userId
+            })
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to create template');
+          }
+          
+          console.log('Template created successfully via API:', result.template.id);
+          
           // Update local state
           set((state) => ({
-            templates: [...state.templates, newTemplate]
+            templates: [...state.templates, result.template]
           }));
+          
+          return result.template;
         } catch (error) {
           console.error('Error creating template:', error);
           throw error;
@@ -262,14 +435,31 @@ export const useStore = create(
 
       updateTemplate: async (updatedTemplate) => {
         try {
-          // Update in Firestore
-          await updateTemplate(updatedTemplate.id, updatedTemplate);
+          // Use API route with Admin SDK
+          const response = await fetch('/api/templates', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedTemplate)
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to update template');
+          }
+          
+          console.log('Template updated successfully via API:', result.template.id);
+          
           // Update local state
           set((state) => ({
             templates: state.templates.map((template) =>
-              template.id === updatedTemplate.id ? { ...template, ...updatedTemplate } : template
+              template.id === updatedTemplate.id ? result.template : template
             )
           }));
+          
+          return result.template;
         } catch (error) {
           console.error('Error updating template:', error);
           throw error;
@@ -278,8 +468,22 @@ export const useStore = create(
 
       deleteTemplate: async (templateId) => {
         try {
-          // Delete from Firestore
-          await deleteTemplate(templateId);
+          // Use API route with Admin SDK
+          const response = await fetch(`/api/templates/${templateId}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to delete template');
+          }
+          
+          console.log('Template deleted successfully via API:', templateId);
+          
           // Update local state
           set((state) => ({
             templates: state.templates.filter((template) => template.id !== templateId)
@@ -293,11 +497,26 @@ export const useStore = create(
       // Settings actions
       updateSettings: async (userId, newSettings) => {
         try {
-          // Update in Firestore
-          await createOrUpdateUserSettings(userId, newSettings);
+          // Use API route with Admin SDK - pass userId as query parameter
+          const response = await fetch(`/api/settings?userId=${encodeURIComponent(userId)}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(newSettings)
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to update settings');
+          }
+          
+          console.log('Settings updated successfully via API');
+          
           // Update local state
           set((state) => ({
-            settings: { ...state.settings, ...newSettings }
+            settings: { ...state.settings, ...result.settings }
           }));
         } catch (error) {
           console.error('Error updating settings:', error);
@@ -315,11 +534,26 @@ export const useStore = create(
 
       updateProfileAsync: async (userId, newProfile) => {
         try {
-          // Update in Firestore
-          await createOrUpdateUserProfile(userId, newProfile);
+          // Use API route with Admin SDK - pass userId as query parameter
+          const response = await fetch(`/api/profile?userId=${encodeURIComponent(userId)}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(newProfile)
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to update profile');
+          }
+          
+          console.log('Profile updated successfully via API');
+          
           // Update local state
           set((state) => ({
-            profile: { ...state.profile, ...newProfile }
+            profile: { ...state.profile, ...result.profile }
           }));
         } catch (error) {
           console.error('Error updating profile:', error);
@@ -485,12 +719,20 @@ export const useStore = create(
           }, {});
       },
 
-      // Load tasks from Firestore
+      // Load tasks from API route (Admin SDK)
       loadTasks: async (userId) => {
         try {
-          const firestoreTasks = await getUserTasks(userId);
+          const response = await fetch(`/api/tasks?userId=${userId}`);
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to load tasks');
+          }
+          
+          console.log('Tasks loaded successfully via API:', result.tasks?.length || 0);
+          
           set((state) => ({
-            tasks: firestoreTasks
+            tasks: result.tasks || []
           }));
         } catch (error) {
           console.error('Error loading tasks:', error);
@@ -498,76 +740,112 @@ export const useStore = create(
         }
       },
 
-      // Load templates from Firestore
+      // Load templates from API route (Admin SDK)
       loadTemplates: async (userId) => {
         try {
-          const firestoreTemplates = await getUserTemplates(userId);
+          const response = await fetch(`/api/templates?userId=${userId}`);
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to load templates');
+          }
+          
+          console.log('Templates loaded successfully via API:', result.templates?.length || 0);
+          
           set((state) => ({
-            templates: firestoreTemplates
+            templates: result.templates || []
           }));
         } catch (error) {
           console.error('Error loading templates:', error);
-          throw error;
+          // Don't throw error for templates, just set empty array
+          set((state) => ({
+            templates: []
+          }));
         }
       },
 
-      // Load settings from Firestore
+      // Load settings from API route (Admin SDK)
       loadSettings: async (userId) => {
         try {
-          const firestoreSettings = await getUserSettings(userId);
-          if (firestoreSettings) {
+          const response = await fetch(`/api/settings?userId=${userId}`);
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to load settings');
+          }
+          
+          console.log('Settings loaded successfully via API');
+          
+          if (result.settings) {
             set((state) => ({
-              settings: { ...state.settings, ...firestoreSettings }
+              settings: { ...state.settings, ...result.settings }
             }));
           }
         } catch (error) {
           console.error('Error loading settings:', error);
-          throw error;
+          // Don't throw error for settings, keep defaults
         }
       },
 
-      // Load profile from Firestore
+      // Load profile from API route (Admin SDK)
       loadProfile: async (userId) => {
         try {
-          const firestoreProfile = await getUserProfile(userId);
-          if (firestoreProfile) {
+          const response = await fetch(`/api/profile?userId=${userId}`);
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to load profile');
+          }
+          
+          console.log('Profile loaded successfully via API');
+          
+          if (result.profile) {
             set((state) => ({
-              profile: { ...state.profile, ...firestoreProfile }
+              profile: { ...state.profile, ...result.profile }
             }));
           }
         } catch (error) {
           console.error('Error loading profile:', error);
-          throw error;
+          // Don't throw error for profile, keep defaults
         }
       },
 
-      // Load all user data from Firestore
+      // Load all user data from API routes (Admin SDK)
       loadAllUserData: async (userId) => {
         try {
-          const [tasks, templates, settings, profile] = await Promise.all([
-            getUserTasks(userId).catch(err => {
-              console.error('Error loading tasks:', err);
-              return [];
+          const [tasksResponse, templatesResponse, settingsResponse, profileResponse] = await Promise.all([
+            fetch(`/api/tasks?userId=${userId}`).catch(err => {
+              console.error('Error fetching tasks:', err);
+              return { ok: false, json: () => Promise.resolve({ tasks: [] }) };
             }),
-            getUserTemplates(userId).catch(err => {
-              console.error('Error loading templates:', err);
-              return [];
+            fetch(`/api/templates?userId=${userId}`).catch(err => {
+              console.error('Error fetching templates:', err);
+              return { ok: false, json: () => Promise.resolve({ templates: [] }) };
             }),
-            getUserSettings(userId).catch(err => {
-              console.error('Error loading settings:', err);
-              return null;
+            fetch(`/api/settings?userId=${userId}`).catch(err => {
+              console.error('Error fetching settings:', err);
+              return { ok: false, json: () => Promise.resolve({ settings: null }) };
             }),
-            getUserProfile(userId).catch(err => {
-              console.error('Error loading profile:', err);
-              return null;
+            fetch(`/api/profile?userId=${userId}`).catch(err => {
+              console.error('Error fetching profile:', err);
+              return { ok: false, json: () => Promise.resolve({ profile: null }) };
             })
           ]);
 
+          const [tasksData, templatesData, settingsData, profileData] = await Promise.all([
+            tasksResponse.json(),
+            templatesResponse.json(),
+            settingsResponse.json(),
+            profileResponse.json()
+          ]);
+
+          console.log('All user data loaded via API routes');
+
           set((state) => ({
-            tasks,
-            templates,
-            settings: settings ? { ...state.settings, ...settings } : state.settings,
-            profile: profile ? { ...state.profile, ...profile } : state.profile
+            tasks: tasksData.tasks || [],
+            templates: templatesData.templates || [],
+            settings: settingsData.settings ? { ...state.settings, ...settingsData.settings } : state.settings,
+            profile: profileData.profile ? { ...state.profile, ...profileData.profile } : state.profile
           }));
         } catch (error) {
           console.error('Error loading user data:', error);

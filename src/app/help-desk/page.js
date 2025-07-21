@@ -333,6 +333,39 @@ export default function HelpDeskPage() {
           </div>
         )}
 
+        {/* Success Modal */}
+        {showSuccessModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className={`${isDark ? 'bg-gray-900' : 'bg-white'} rounded-2xl p-6 max-w-sm w-full shadow-2xl transform transition-all duration-300 scale-100`}>
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-10 h-10 text-white" />
+                </div>
+                <h3 className={`text-xl font-semibold mb-2 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                  Ticket Created Successfully!
+                </h3>
+                <p className={`${isDark ? 'text-gray-300' : 'text-gray-600'} text-sm mb-4`}>
+                  Your ticket number is:
+                </p>
+                <div className={`${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-xl px-4 py-3 mb-6`}>
+                  <p className={`text-lg font-mono font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                    {createdTicketNumber}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowSuccessModal(false);
+                    setCreatedTicketNumber(null);
+                  }}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-all duration-200"
+                >
+                  Got it!
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Create Ticket Modal */}
         {showCreateModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
