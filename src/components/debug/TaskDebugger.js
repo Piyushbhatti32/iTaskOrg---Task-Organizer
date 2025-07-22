@@ -11,11 +11,7 @@ import { auth } from '../../config/firebase';
  * Shows current task state, user info, and provides debugging tools
  */
 const TaskDebugger = ({ enabled = process.env.NODE_ENV === 'development' }) => {
-  // Ensure the debugger is never shown in production
-  if (process.env.NODE_ENV === 'production') {
-    return null;
-  }
-
+  // Always call hooks first - React rules requirement
   const tasks = useTasks();
   const [expanded, setExpanded] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -38,6 +34,11 @@ const TaskDebugger = ({ enabled = process.env.NODE_ENV === 'development' }) => {
     }
     return () => clearInterval(interval);
   }, [autoRefresh, tasks]);
+
+  // Conditional returns after hooks
+  if (process.env.NODE_ENV === 'production') {
+    return null;
+  }
 
   if (!enabled) return null;
 
