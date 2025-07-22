@@ -11,13 +11,19 @@ function TimerDisplay({ timeLeft, isBreak, isRunning }) {
   const seconds = timeLeft % 60;
   const percentage = ((timeLeft / (isBreak ? (timeLeft >= 15 * 60 ? 15 * 60 : 5 * 60) : 25 * 60)) * 100).toFixed(1);
   
-  const progressColor = isBreak ? '#10B981' : `var(--accent-${accentColor})`;
+  const progressColor = isBreak ? '#10B981' : 'var(--color-primary-500)';
+  const glowColor = isBreak ? '#10B981' : 'var(--color-primary-400)';
   
   return (
-    <div className="relative w-72 h-72 mx-auto mb-8">
+    <div className="relative w-72 h-72 mx-auto mb-8 slide-up stagger-5">
       {/* Background pulse animation when running */}
       {isRunning && (
-        <div className={`absolute inset-0 rounded-full ${isBreak ? 'animate-pulse-green' : 'animate-pulse-blue'}`} />
+        <div 
+          className="absolute inset-0 rounded-full animate-pulse opacity-20"
+          style={{
+            background: `radial-gradient(circle, ${glowColor}40, transparent 70%)`
+          }}
+        />
       )}
       <svg className="w-full h-full" viewBox="0 0 100 100">
         {/* Background circles for depth */}
@@ -148,14 +154,14 @@ function StatsDisplay({ sessionCount, totalFocusTime }) {
   const { theme, accentColor } = useTheme();
   return (
     <div className="grid grid-cols-2 gap-4 mb-8">
-      <div className="backdrop-blur-sm rounded-xl p-4 text-center" style={{
+      <div className="backdrop-blur-sm rounded-xl p-4 text-center hover-lift slide-up stagger-2" style={{
         backgroundColor: 'var(--background-secondary)',
         border: '1px solid var(--border-color)'
       }}>
         <div className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{sessionCount}</div>
         <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Sessions Completed</div>
       </div>
-      <div className="backdrop-blur-sm rounded-xl p-4 text-center" style={{
+      <div className="backdrop-blur-sm rounded-xl p-4 text-center hover-lift slide-up stagger-3" style={{
         backgroundColor: 'var(--background-secondary)',
         border: '1px solid var(--border-color)'
       }}>
@@ -255,19 +261,19 @@ export default function FocusPage() {
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">
-      <div className={`backdrop-blur-sm rounded-3xl shadow-xl p-8 border ${
+      <div className={`backdrop-blur-sm rounded-3xl shadow-xl p-8 border hover-lift slide-up ${
         isDark 
           ? 'bg-gray-900/80 border-gray-700' 
           : 'bg-white/80 border-gray-100'
       }`}>
-        <h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent text-center">
+        <h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent text-center slide-up stagger-1">
           Focus Mode
         </h1>
         
         <StatsDisplay sessionCount={sessionCount} totalFocusTime={totalFocusTime} />
       
       {!isBreak && (
-          <div className="mb-8">
+          <div className="mb-8 slide-up stagger-4">
         <TaskSelector
           selectedTaskId={selectedTaskId}
           onSelectTask={setSelectedTaskId}
@@ -275,7 +281,7 @@ export default function FocusPage() {
           </div>
         )}
 
-        <div className="text-center mb-6">
+        <div className="text-center mb-6 slide-up stagger-5">
           <div className={`text-xl font-semibold mb-2 ${
             isBreak ? 'text-green-600' : 'text-blue-600'
           }`}>
@@ -284,14 +290,16 @@ export default function FocusPage() {
           <SessionProgress sessionCount={sessionCount} />
         </div>
 
-        <TimerDisplay timeLeft={timeLeft} isBreak={isBreak} isRunning={isRunning} />
+        <div className="slide-up stagger-6">
+          <TimerDisplay timeLeft={timeLeft} isBreak={isBreak} isRunning={isRunning} />
+        </div>
 
-        <div className="flex justify-center gap-4">
+        <div className="flex justify-center gap-4 slide-up stagger-7">
           <button
             onClick={toggleTimer}
             className={`
               px-8 py-3 rounded-xl font-medium text-white
-              transform transition-all duration-200
+              transform transition-all duration-200 hover-glow
               active:scale-95 shadow-lg
               ${isRunning
                 ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-red-500/25'
@@ -320,7 +328,7 @@ export default function FocusPage() {
           <button
             onClick={resetTimer}
             className="
-              px-8 py-3 rounded-xl font-medium
+              px-8 py-3 rounded-xl font-medium hover-lift
               bg-gradient-to-r from-gray-100 to-gray-200
               hover:from-gray-200 hover:to-gray-300
               text-gray-700 transform transition-all duration-200

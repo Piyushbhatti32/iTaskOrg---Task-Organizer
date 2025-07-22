@@ -435,6 +435,12 @@ function AppLayout({ children }) {
       }`}>
         {children}
       </main>
+      
+      {/* Debug Component - Only shows in development */}
+      {process.env.NODE_ENV === 'development' && (() => {
+        const TaskDebugger = require('../components/debug/TaskDebugger').default;
+        return <TaskDebugger />;
+      })()}
     </div>
   );
 }

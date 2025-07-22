@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/config/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { adminDb } from '@/config/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(request) {
   try {
@@ -22,14 +22,13 @@ export async function POST(request) {
     }
 
     // Create notification document
-    const notificationRef = collection(db, 'notifications');
-    const notificationDoc = await addDoc(notificationRef, {
+    const notificationDoc = await adminDb.collection('notifications').add({
       userId: recipientId,
       title,
       content: message,
       type,
       status: 'unread',
-      createdAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
       data: notificationData || {},
       senderName: senderName || 'System',
       link: notificationData?.link || null

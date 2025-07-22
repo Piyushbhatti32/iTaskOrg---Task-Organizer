@@ -154,24 +154,52 @@ export async function PUT(request) {
     const taskData = await request.json();
     const { id: taskId, ...updateData } = taskData;
 
+    console.log('🔄 PUT /api/tasks - Received request');
+    console.log('📋 Task ID:', taskId);
+    console.log('📝 Update data:', updateData);
+
     if (!taskId) {
+      console.error('❌ No task ID provided');
       return new Response(JSON.stringify({ 
         error: 'Task ID is required' 
       }), { status: 400 });
     }
 
-    console.log('Updating task:', taskId);
+    console.log('🔍 Searching for task in Firestore:', taskId);
 
     // Update task in Firestore using Admin SDK
     const taskRef = adminDb.collection('tasks').doc(taskId);
     
     // Check if task exists
     const taskDoc = await taskRef.get();
+    
     if (!taskDoc.exists) {
+      console.error('❌ Task not found in Firestore:', taskId);
+      
+      // Let's also check what tasks exist for debugging
+      const allTasksSnapshot = await adminDb.collection('tasks').limit(10).get();
+      const existingTaskIds = allTasksSnapshot.docs.map(doc => ({
+        id: doc.id,
+        title: doc.data().title,
+        assignedTo: doc.data().assignedTo
+      }));
+      
+      console.log('📋 Existing tasks in Firestore (first 10):', existingTaskIds);
+      
       return new Response(JSON.stringify({ 
-        error: 'Task not found' 
+        error: 'Task not found',
+        requestedTaskId: taskId,
+        existingTasks: existingTaskIds
       }), { status: 404 });
     }
+
+    console.log('✅ Task found in Firestore');
+    console.log('📄 Current task data:', {
+      id: taskDoc.id,
+      title: taskDoc.data().title,
+      completed: taskDoc.data().completed,
+      assignedTo: taskDoc.data().assignedTo
+    });
 
     // Update the task
     const updatedData = {
@@ -179,9 +207,10 @@ export async function PUT(request) {
       updatedAt: FieldValue.serverTimestamp()
     };
 
+    console.log('🔄 Applying update to Firestore...');
     await taskRef.update(updatedData);
 
-    console.log('Task updated successfully:', taskId);
+    console.log('✅ Task updated successfully in Firestore:', taskId);
 
     // Get the updated task data
     const updatedTaskDoc = await taskRef.get();
@@ -192,6 +221,13 @@ export async function PUT(request) {
       updatedAt: updatedTaskDoc.data().updatedAt?.toDate?.()?.toISOString() || updatedTaskDoc.data().updatedAt,
       completedAt: updatedTaskDoc.data().completedAt?.toDate?.()?.toISOString() || updatedTaskDoc.data().completedAt
     };
+
+    console.log('📄 Updated task data:', {
+      id: updatedTaskData.id,
+      title: updatedTaskData.title,
+      completed: updatedTaskData.completed,
+      completedAt: updatedTaskData.completedAt
+    });
 
     return new Response(JSON.stringify({
       message: 'Task updated successfully',
@@ -205,7 +241,8 @@ export async function PUT(request) {
     });
 
   } catch (error) {
-    console.error('Error updating task:', error);
+    console.error('❌ Error updating task:', error);
+    console.error('🔍 Error stack:', error.stack);
     return new Response(JSON.stringify({ 
       error: 'Error updating task',
       details: error.message,

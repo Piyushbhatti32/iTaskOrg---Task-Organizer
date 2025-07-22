@@ -46,7 +46,7 @@ function WeeklyChart({ tasks, isDark }) {
   const barHeight = (count) => (maxTasks > 0 ? (count / maxTasks) * 100 : 0);
 
   return (
-    <div className={`mt-8 backdrop-blur-sm rounded-2xl shadow-lg border p-6 transition-all duration-300 hover:shadow-xl ${
+    <div className={`slide-up stagger-5 mt-8 backdrop-blur-sm rounded-2xl shadow-lg border p-6 transition-all duration-300 hover:shadow-xl ${
       isDark 
         ? 'bg-gray-800/70 border-gray-700/30 hover:bg-gray-800/80' 
         : 'bg-white/70 border-white/20 hover:bg-white/80'
@@ -89,7 +89,7 @@ function PriorityChart({ tasks, isDark }) {
   const getPercentage = (count) => (total > 0 ? (count / total) * 100 : 0);
 
   return (
-    <div className={`mt-8 backdrop-blur-sm rounded-2xl shadow-lg border p-6 transition-all duration-300 hover:shadow-xl ${
+    <div className={`slide-up stagger-6 mt-8 backdrop-blur-sm rounded-2xl shadow-lg border p-6 transition-all duration-300 hover:shadow-xl ${
       isDark 
         ? 'bg-gray-800/70 border-gray-700/30 hover:bg-gray-800/80' 
         : 'bg-white/70 border-white/20 hover:bg-white/80'
@@ -184,7 +184,7 @@ export default function StatsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className={`backdrop-blur-sm p-6 rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
+          <div className={`slide-up hover-lift stagger-1 backdrop-blur-sm p-6 rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
             isDark 
               ? 'bg-gray-800/70 border-gray-700/30 hover:bg-gray-800/80' 
               : 'bg-white/70 border-white/20 hover:bg-white/80'
@@ -194,7 +194,7 @@ export default function StatsPage() {
             }`}>Total Tasks</h3>
             <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{stats.total}</p>
           </div>
-          <div className={`backdrop-blur-sm p-6 rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
+          <div className={`slide-up hover-lift stagger-2 backdrop-blur-sm p-6 rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
             isDark 
               ? 'bg-gray-800/70 border-gray-700/30 hover:bg-gray-800/80' 
               : 'bg-white/70 border-white/20 hover:bg-white/80'
@@ -204,7 +204,7 @@ export default function StatsPage() {
             }`}>Completed Tasks</h3>
             <p className="text-3xl font-bold text-green-600">{stats.completed}</p>
           </div>
-          <div className={`backdrop-blur-sm p-6 rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
+          <div className={`slide-up hover-lift stagger-3 backdrop-blur-sm p-6 rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
             isDark 
               ? 'bg-gray-800/70 border-gray-700/30 hover:bg-gray-800/80' 
               : 'bg-white/70 border-white/20 hover:bg-white/80'
@@ -214,7 +214,7 @@ export default function StatsPage() {
             }`}>High Priority</h3>
             <p className="text-3xl font-bold text-orange-600">{stats.highPriority}</p>
           </div>
-          <div className={`backdrop-blur-sm p-6 rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
+          <div className={`slide-up hover-lift stagger-4 backdrop-blur-sm p-6 rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
             isDark 
               ? 'bg-gray-800/70 border-gray-700/30 hover:bg-gray-800/80' 
               : 'bg-white/70 border-white/20 hover:bg-white/80'

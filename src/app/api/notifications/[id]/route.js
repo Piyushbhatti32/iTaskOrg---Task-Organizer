@@ -5,7 +5,9 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 // PATCH /api/notifications/[id] - Mark a notification as read
 export async function PATCH(request, { params }) {
   try {
-    const { id } = params;
+    // Await params for Next.js 15 compatibility
+    const resolvedParams = await params;
+    const { id } = resolvedParams;
     const data = await request.json();
     const { status } = data;
 

@@ -10,7 +10,7 @@ function ThemeSettings({ settings, onUpdate }) {
   const { isDark, accentColors } = useTheme();
   
   return (
-    <div className={`${isDark ? 'bg-gray-900/70' : 'bg-white/70'} backdrop-blur-sm p-6 rounded-2xl shadow-lg border ${isDark ? 'border-gray-700/50' : 'border-white/20'} mb-6 transition-all duration-300 hover:shadow-xl ${isDark ? 'hover:bg-gray-900/80' : 'hover:bg-white/80'}`}>
+    <div className={`${isDark ? 'bg-gray-900/70' : 'bg-white/70'} backdrop-blur-sm p-6 rounded-2xl shadow-lg border ${isDark ? 'border-gray-700/50' : 'border-white/20'} mb-6 transition-all duration-300 hover:shadow-xl ${isDark ? 'hover:bg-gray-900/80' : 'hover:bg-white/80'} animate-slide-up hover:animate-lift`}>
       <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Theme</h2>
       <div className="space-y-4">
         <div>
@@ -75,7 +75,7 @@ function NotificationSettings({ settings, onUpdate }) {
   const { isDark } = useTheme();
   
   return (
-    <div className={`${isDark ? 'bg-gray-900/70' : 'bg-white/70'} backdrop-blur-sm p-6 rounded-2xl shadow-lg border ${isDark ? 'border-gray-700/50' : 'border-white/20'} mb-6 transition-all duration-300 hover:shadow-xl ${isDark ? 'hover:bg-gray-900/80' : 'hover:bg-white/80'}`}>
+    <div className={`${isDark ? 'bg-gray-900/70' : 'bg-white/70'} backdrop-blur-sm p-6 rounded-2xl shadow-lg border ${isDark ? 'border-gray-700/50' : 'border-white/20'} mb-6 transition-all duration-300 hover:shadow-xl ${isDark ? 'hover:bg-gray-900/80' : 'hover:bg-white/80'} animate-slide-up stagger-2 hover:animate-lift`}>
       <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Notifications</h2>
       <div className="space-y-4">
         <div>
@@ -130,7 +130,7 @@ function PomodoroSettings({ settings, onUpdate }) {
   const { isDark } = useTheme();
   
   return (
-    <div className={`${isDark ? 'bg-gray-900/70' : 'bg-white/70'} backdrop-blur-sm p-6 rounded-2xl shadow-lg border ${isDark ? 'border-gray-700/50' : 'border-white/20'} mb-6 transition-all duration-300 hover:shadow-xl ${isDark ? 'hover:bg-gray-900/80' : 'hover:bg-white/80'}`}>
+    <div className={`${isDark ? 'bg-gray-900/70' : 'bg-white/70'} backdrop-blur-sm p-6 rounded-2xl shadow-lg border ${isDark ? 'border-gray-700/50' : 'border-white/20'} mb-6 transition-all duration-300 hover:shadow-xl ${isDark ? 'hover:bg-gray-900/80' : 'hover:bg-white/80'} animate-slide-up stagger-3 hover:animate-lift`}>
       <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Pomodoro Timer</h2>
       <div className="space-y-4">
         <div>

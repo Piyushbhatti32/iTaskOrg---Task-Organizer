@@ -107,7 +107,7 @@ function MemberStats({ member }) {
 
 // Member card component
 function MemberCard({ member, onDelete, onUnassignTask }) {
-  const { isDark } = useTheme();
+  const { isDark, accentColor } = useTheme();
   
   const getRoleStyle = (role) => {
     const baseStyles = isDark ? 'border-opacity-30' : 'border-opacity-100';
@@ -224,10 +224,10 @@ export default function TeamPage() {
         <div className={`absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] opacity-40 -z-10 ${
           isDark ? 'opacity-20' : 'opacity-40'
         }`} />
-        <h1 className="text-4xl font-extrabold mb-8 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent drop-shadow-lg">Team</h1>
+        <h1 className="text-4xl font-extrabold mb-8 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent drop-shadow-lg slide-up stagger-1">Team</h1>
 
         {/* Team Creation Form */}
-        <div className="mb-8">
+        <div className="mb-8 slide-up stagger-2">
           <TeamCreateForm onTeamCreated={handleTeamCreated} />
         </div>
 
@@ -241,12 +241,13 @@ export default function TeamPage() {
               No team members yet. Add someone above!
             </div>
           ) : (
-            members.map(member => (
+            members.map((member, index) => (
               <div
                 key={member.id}
-                className={`rounded-2xl border-2 p-2 transition-all duration-200 shadow-lg hover:shadow-xl hover:border-blue-400 border-transparent ${
+                className={`rounded-2xl border-2 p-2 transition-all duration-200 shadow-lg hover:shadow-xl hover:border-blue-400 border-transparent hover-lift slide-up ${
                   isDark ? 'bg-gray-900/80' : 'bg-white/80'
                 }`}
+                style={{ animationDelay: `${0.1 * (index + 3)}s` }}
               >
                 <MemberCard
                   member={member}
@@ -260,24 +261,24 @@ export default function TeamPage() {
 
       {/* Task Assignment Form (show only if there are members) */}
       {members.length > 0 && (
-        <div className="mb-12">
+        <div className="mb-12 slide-up" style={{ animationDelay: `${0.1 * (members.length + 4)}s` }}>
           <TaskAssignForm teamId={teamId} members={members} onTaskAssigned={handleTaskAssigned} />
         </div>
       )}
 
       {/* Task Response Interface for current user */}
       {currentMember && currentMember.tasks && currentMember.tasks.length > 0 && (
-        <div className="mt-12">
+        <div className="mt-12 slide-up" style={{ animationDelay: `${0.1 * (members.length + 5)}s` }}>
           <h2 className={`text-2xl font-semibold mb-4 ${
             isDark ? 'text-blue-400' : 'text-blue-700'
           }`}>Your Assigned Tasks</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {currentMember.tasks.filter(task => task.status === 'pending').map(task => (
-              <div key={task.id} className={`rounded-2xl shadow-lg border p-0 md:p-4 ${
+            {currentMember.tasks.filter(task => task.status === 'pending').map((task, index) => (
+              <div key={task.id} className={`rounded-2xl shadow-lg border p-0 md:p-4 hover-lift slide-up ${
                 isDark 
                   ? 'border-gray-700 bg-gray-900/90' 
                   : 'border-blue-100 bg-white/90'
-              }`}>
+              }`} style={{ animationDelay: `${0.1 * (index + members.length + 6)}s` }}>
                 <TaskResponseForm
                   teamId={teamId}
                   task={task}

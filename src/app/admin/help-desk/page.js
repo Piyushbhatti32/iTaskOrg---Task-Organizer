@@ -220,8 +220,21 @@ export default function AdminHelpDeskPage() {
 
   const formatDate = (date) => {
     if (!date) return 'N/A';
-    const d = date.toDate ? date.toDate() : new Date(date);
-    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    try {
+      const d = date.toDate ? date.toDate() : new Date(date);
+      
+      // Check if the date is valid
+      if (isNaN(d.getTime())) {
+        console.warn('Invalid date encountered:', date);
+        return 'Invalid Date';
+      }
+      
+      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (error) {
+      console.error('Error formatting date:', error, 'Original date:', date);
+      return 'Invalid Date';
+    }
   };
 
   const getPriorityInfo = (priority) => priorities.find(p => p.value === priority) || priorities[1];

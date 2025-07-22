@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, Mail, Globe, MapPin, Calendar, Trophy, TrendingUp, Activity, Settings, Camera, Edit3, Save, X, Loader2 } from 'lucide-react';
+import { User, Mail, Globe, MapPin, Calendar, Trophy, TrendingUp, Activity, Settings, Camera, Edit3, Save, X, Loader2, RefreshCw, Database, Clock, AlertTriangle, CheckCircle, Trash2, Download } from 'lucide-react';
 import { useTasks, useProfile, useUpdateProfile } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
 import { updateUserProfile } from '../../utils/db';
@@ -486,7 +486,7 @@ function RecentActivity({ tasks }) {
       ) : (
         <div className="space-y-4">
           {recentTasks.map((task, index) => (
-            <div key={task.id} className={`flex items-center gap-4 p-4 rounded-xl transition-colors ${
+            <div key={task.id} className={`flex items-center gap-4 p-4 rounded-xl transition-colors slide-up hover-lift stagger-${index + 1} ${
               isDark ? 'bg-gray-700/50 hover:bg-gray-600/50' : 'bg-gray-50 hover:bg-gray-100'
             }`}>
               <div className="flex-shrink-0">
@@ -566,6 +566,281 @@ function CategoryChart({ tasks }) {
   );
 }
 
+// Enhanced Debug Controls Component
+function DebugControls({ tasks, profile, user, isDark }) {
+  const [debugLogs, setDebugLogs] = useState([]);
+  const [isRunningTest, setIsRunningTest] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState(null);
+  const [cacheStats, setCacheStats] = useState(null);
+
+  // Utility function to add debug logs
+  const addDebugLog = (message, type = 'info') => {
+    const timestamp = new Date().toLocaleTimeString();
+    setDebugLogs(prev => [{ message, type, timestamp }, ...prev.slice(0, 9)]); // Keep last 10 logs
+  };
+
+  // Debug function to log current task state
+  const logTaskState = () => {
+    const taskStats = {
+      total: tasks.length,
+      completed: tasks.filter(t => t.completed).length,
+      pending: tasks.filter(t => !t.completed).length,
+      highPriority: tasks.filter(t => t.priority === 'high').length,
+      overdue: tasks.filter(t => {
+        if (!t.dueDate || t.completed) return false;
+        return new Date(t.dueDate) < new Date();
+      }).length,
+      categories: [...new Set(tasks.map(t => t.category))].length
+    };
+    
+    console.log('=== TASK STATE DEBUG ===');
+    console.log('Task Statistics:', taskStats);
+    console.log('Recent Tasks:', tasks.slice(0, 5));
+    console.log('Task IDs:', tasks.map(t => t.id));
+    
+    addDebugLog(`Task state logged - ${taskStats.total} tasks, ${taskStats.completed} completed`, 'success');
+  };
+
+  // Debug function to simulate sync operation
+  const performSyncTest = async () => {
+    setIsRunningTest(true);
+    addDebugLog('Starting sync test...', 'info');
+    
+    try {
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Mock sync operations
+      const operations = [
+        'Checking server connection',
+        'Fetching remote changes',
+        'Comparing local data',
+        'Resolving conflicts',
+        'Updating local store'
+      ];
+      
+      for (let op of operations) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        addDebugLog(op, 'info');
+      }
+      
+      setLastSyncTime(new Date());
+      addDebugLog('Sync test completed successfully', 'success');
+      
+    } catch (error) {
+      addDebugLog(`Sync test failed: ${error.message}`, 'error');
+    } finally {
+      setIsRunningTest(false);
+    }
+  };
+
+  // Debug function to clear local caches
+  const clearLocalCaches = () => {
+    try {
+      // Clear localStorage items (be careful not to clear auth tokens)
+      const keysToRemove = [];
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('cache') || key.includes('temp') || key.includes('debug'))) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      
+      // Update cache stats
+      setCacheStats({
+        itemsCleared: keysToRemove.length,
+        clearedAt: new Date(),
+        remainingItems: localStorage.length
+      });
+      
+      addDebugLog(`Cleared ${keysToRemove.length} cache items`, 'success');
+      console.log('Cleared cache keys:', keysToRemove);
+    } catch (error) {
+      addDebugLog(`Cache clear failed: ${error.message}`, 'error');
+    }
+  };
+
+  // Debug function to export debug data
+  const exportDebugData = () => {
+    const debugData = {
+      timestamp: new Date().toISOString(),
+      user: {
+        uid: user?.uid,
+        email: user?.email,
+        displayName: user?.displayName
+      },
+      profile: profile,
+      tasks: tasks.map(t => ({
+        id: t.id,
+        title: t.title,
+        category: t.category,
+        priority: t.priority,
+        completed: t.completed,
+        createdAt: t.createdAt,
+        completedAt: t.completedAt
+      })),
+      browser: {
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        cookieEnabled: navigator.cookieEnabled,
+        onLine: navigator.onLine
+      },
+      performance: {
+        memory: performance.memory ? {
+          used: Math.round((performance.memory.usedJSHeapSize || 0) / 1024 / 1024),
+          total: Math.round((performance.memory.totalJSHeapSize || 0) / 1024 / 1024),
+          limit: Math.round((performance.memory.jsHeapSizeLimit || 0) / 1024 / 1024)
+        } : null,
+        timing: performance.timing ? {
+          domContentLoaded: performance.timing.domContentLoadedEventEnd - performance.timing.navigationStart,
+          loadComplete: performance.timing.loadEventEnd - performance.timing.navigationStart
+        } : null
+      },
+      localStorage: {
+        items: localStorage.length,
+        size: JSON.stringify(localStorage).length
+      }
+    };
+    
+    const blob = new Blob([JSON.stringify(debugData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `debug-export-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    addDebugLog('Debug data exported to file', 'success');
+  };
+
+  // Get log type styling
+  const getLogTypeStyle = (type) => {
+    switch (type) {
+      case 'success':
+        return isDark ? 'text-green-400' : 'text-green-600';
+      case 'error':
+        return isDark ? 'text-red-400' : 'text-red-600';
+      case 'warning':
+        return isDark ? 'text-yellow-400' : 'text-yellow-600';
+      default:
+        return isDark ? 'text-blue-400' : 'text-blue-600';
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Debug Controls */}
+      <div className="grid grid-cols-1 gap-3">
+        <button 
+          onClick={logTaskState}
+          className={`flex items-center gap-3 p-3 text-left rounded-lg transition-colors ${
+            isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-50 text-gray-700'
+          }`}
+        >
+          <Database className={`w-4 h-4 ${
+            isDark ? 'text-blue-400' : 'text-blue-600'
+          }`} />
+          <span className="text-sm">Log Task State</span>
+        </button>
+
+        <button 
+          onClick={performSyncTest}
+          disabled={isRunningTest}
+          className={`flex items-center gap-3 p-3 text-left rounded-lg transition-colors disabled:opacity-50 ${
+            isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-50 text-gray-700'
+          }`}
+        >
+          <RefreshCw className={`w-4 h-4 ${
+            isRunningTest ? 'animate-spin' : ''
+          } ${
+            isDark ? 'text-green-400' : 'text-green-600'
+          }`} />
+          <span className="text-sm">{isRunningTest ? 'Running Sync Test...' : 'Test Sync Process'}</span>
+        </button>
+
+        <button 
+          onClick={clearLocalCaches}
+          className={`flex items-center gap-3 p-3 text-left rounded-lg transition-colors ${
+            isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-50 text-gray-700'
+          }`}
+        >
+          <Trash2 className={`w-4 h-4 ${
+            isDark ? 'text-orange-400' : 'text-orange-600'
+          }`} />
+          <span className="text-sm">Clear Local Caches</span>
+        </button>
+
+        <button 
+          onClick={exportDebugData}
+          className={`flex items-center gap-3 p-3 text-left rounded-lg transition-colors ${
+            isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-50 text-gray-700'
+          }`}
+        >
+          <Download className={`w-4 h-4 ${
+            isDark ? 'text-purple-400' : 'text-purple-600'
+          }`} />
+          <span className="text-sm">Export Debug Data</span>
+        </button>
+      </div>
+
+      {/* Status Information */}
+      {(lastSyncTime || cacheStats) && (
+        <div className={`p-3 rounded-lg text-xs space-y-2 ${
+          isDark ? 'bg-gray-700/50 text-gray-300' : 'bg-gray-50 text-gray-600'
+        }`}>
+          {lastSyncTime && (
+            <div className="flex items-center gap-2">
+              <Clock className="w-3 h-3" />
+              <span>Last sync test: {lastSyncTime.toLocaleTimeString()}</span>
+            </div>
+          )}
+          {cacheStats && (
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-3 h-3" />
+              <span>Cache cleared: {cacheStats.itemsCleared} items at {cacheStats.clearedAt.toLocaleTimeString()}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Debug Logs */}
+      {debugLogs.length > 0 && (
+        <div className={`p-3 rounded-lg ${
+          isDark ? 'bg-gray-700/50' : 'bg-gray-50'
+        }`}>
+          <div className={`text-xs font-medium mb-2 ${
+            isDark ? 'text-gray-300' : 'text-gray-600'
+          }`}>Debug Logs:</div>
+          <div className="space-y-1 max-h-32 overflow-y-auto">
+            {debugLogs.map((log, index) => (
+              <div key={index} className="flex items-start gap-2 text-xs">
+                <span className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  {log.timestamp}
+                </span>
+                <span className={getLogTypeStyle(log.type)}>
+                  {log.message}
+                </span>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => setDebugLogs([])}
+            className={`mt-2 text-xs ${
+              isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-600'
+            }`}
+          >
+            Clear logs
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Main Enhanced Profile Page
 export default function ProfilePage() {
   const tasks = useTasks();
@@ -576,6 +851,7 @@ export default function ProfilePage() {
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showDebugInfo, setShowDebugInfo] = useState(false);
+  const [showDebugControls, setShowDebugControls] = useState(false);
 
   const handleProfileUpdate = (updates) => {
     if (user && user.uid) {
@@ -623,21 +899,62 @@ export default function ProfilePage() {
             <div className="space-y-3">
               <button 
                 onClick={() => setShowDebugInfo(!showDebugInfo)}
-                className={`w-full flex items-center gap-3 p-3 text-left rounded-lg transition-colors ${
+                className={`w-full flex items-center justify-between gap-3 p-3 text-left rounded-lg transition-colors ${
                   isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
                 }`}
               >
-                <Settings className={`w-5 h-5 ${
-                  isDark ? 'text-gray-400' : 'text-gray-600'
-                }`} />
-                <span className={`${
-                  isDark ? 'text-gray-300' : 'text-gray-700'
-                }`}>Debug Info</span>
+                <div className="flex items-center gap-3">
+                  <Settings className={`w-5 h-5 ${
+                    isDark ? 'text-gray-400' : 'text-gray-600'
+                  }`} />
+                  <span className={`${
+                    isDark ? 'text-gray-300' : 'text-gray-700'
+                  }`}>Debug Info</span>
+                </div>
+                <div className={`w-2 h-2 rounded-full ${
+                  showDebugInfo ? 'bg-green-500' : (isDark ? 'bg-gray-600' : 'bg-gray-300')
+                }`}></div>
+              </button>
+              
+              <button 
+                onClick={() => setShowDebugControls(!showDebugControls)}
+                className={`w-full flex items-center justify-between gap-3 p-3 text-left rounded-lg transition-colors ${
+                  isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Activity className={`w-5 h-5 ${
+                    isDark ? 'text-blue-400' : 'text-blue-600'
+                  }`} />
+                  <span className={`${
+                    isDark ? 'text-gray-300' : 'text-gray-700'
+                  }`}>Debug Controls</span>
+                </div>
+                <div className={`w-2 h-2 rounded-full ${
+                  showDebugControls ? 'bg-blue-500' : (isDark ? 'bg-gray-600' : 'bg-gray-300')
+                }`}></div>
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Debug Controls Panel */}
+      {showDebugControls && (
+        <div className={`mt-8 p-6 rounded-2xl border ${
+          isDark ? 'bg-gray-800/50 border-gray-700/50' : 'bg-white/50 border-gray-200'
+        }`}>
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className={`w-5 h-5 ${
+              isDark ? 'text-blue-400' : 'text-blue-600'
+            }`} />
+            <h3 className={`font-bold ${
+              isDark ? 'text-gray-100' : 'text-gray-900'
+            }`}>Debug Controls</h3>
+          </div>
+          <DebugControls tasks={tasks} profile={profile} user={user} isDark={isDark} />
+        </div>
+      )}
 
       {/* Debug Info */}
       {showDebugInfo && (

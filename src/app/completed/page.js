@@ -81,14 +81,18 @@ function TaskList({ tasks = [], onRestore, onDelete }) {
 
   return (
     <div className="space-y-6">
-      {Object.entries(groupedTasks)
+{Object.entries(groupedTasks)
         .sort(([dateA], [dateB]) => new Date(dateB) - new Date(dateA))
-        .map(([date, dateTasks]) => (
-          <div key={date} className={`backdrop-blur-sm rounded-2xl shadow-lg border overflow-hidden transition-all duration-300 hover:shadow-xl ${
-            isDark 
-              ? 'bg-gray-800/70 border-gray-700/50 hover:bg-gray-800/80' 
-              : 'bg-white/70 border-white/20 hover:bg-white/80'
-          }`}>
+        .map(([date, dateTasks], groupIndex) => (
+          <div
+            key={date}
+            className={`backdrop-blur-sm rounded-2xl shadow-lg border overflow-hidden transition-all duration-300 hover:shadow-xl slide-up ${
+              isDark 
+                ? 'bg-gray-800/70 border-gray-700/50 hover:bg-gray-800/80' 
+                : 'bg-white/70 border-white/20 hover:bg-white/80'
+            }`}
+            style={{ animationDelay: `${groupIndex * 100}ms` }}
+          >
             <div className={`px-6 py-4 border-b ${
               isDark 
                 ? 'bg-gradient-to-r from-gray-700/50 to-gray-600/50 border-gray-700/50' 
@@ -99,10 +103,14 @@ function TaskList({ tasks = [], onRestore, onDelete }) {
               </h3>
             </div>
             <ul>
-              {dateTasks.map(task => (
-                <li key={task.id} className={`p-6 border-b last:border-b-0 ${
-                  isDark ? 'border-gray-700/50' : 'border-gray-100'
-                }`}>
+              {dateTasks.map((task, taskIndex) => (
+                <li
+                  key={task.id}
+                  className={`p-6 border-b last:border-b-0 slide-up ${
+                    isDark ? 'border-gray-700/50' : 'border-gray-100'
+                  }`}
+                  style={{ animationDelay: `${(groupIndex * 300) + (taskIndex * 50)}ms` }}
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h4 className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{task.title}</h4>

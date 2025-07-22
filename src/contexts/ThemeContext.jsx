@@ -183,17 +183,46 @@ export function ThemeProvider({ children }) {
       root.style.setProperty('--foreground-color', '#ffffff');
       root.style.setProperty('--muted-text-color', '#a3a3a3');
       root.style.setProperty('--border-color', '#262626');
+      
+      // Update new CSS variables for dark mode
+      root.style.setProperty('--background-primary', '#0f0f0f');
+      root.style.setProperty('--background-secondary', '#1a1a1a');
+      root.style.setProperty('--background-tertiary', '#262626');
+      root.style.setProperty('--surface-primary', '#171717');
+      root.style.setProperty('--surface-secondary', '#262626');
+      root.style.setProperty('--text-primary', '#ffffff');
+      root.style.setProperty('--text-secondary', '#d1d5db');
+      root.style.setProperty('--text-tertiary', '#9ca3af');
+      root.style.setProperty('--text-muted', '#6b7280');
+      root.style.setProperty('--border-primary', '#374151');
+      root.style.setProperty('--border-secondary', '#4b5563');
+      root.style.setProperty('--divider', '#374151');
     } else {
       root.classList.remove('dark');
       root.style.setProperty('--background-color', '#f9fafb');
       root.style.setProperty('--foreground-color', '#111827');
       root.style.setProperty('--muted-text-color', '#6b7280');
       root.style.setProperty('--border-color', '#e5e7eb');
+      
+      // Update new CSS variables for light mode
+      root.style.setProperty('--background-primary', '#ffffff');
+      root.style.setProperty('--background-secondary', '#f8fafc');
+      root.style.setProperty('--background-tertiary', '#f1f5f9');
+      root.style.setProperty('--surface-primary', '#ffffff');
+      root.style.setProperty('--surface-secondary', '#f8fafc');
+      root.style.setProperty('--text-primary', '#0f172a');
+      root.style.setProperty('--text-secondary', '#475569');
+      root.style.setProperty('--text-tertiary', '#64748b');
+      root.style.setProperty('--text-muted', '#94a3b8');
+      root.style.setProperty('--border-primary', '#e2e8f0');
+      root.style.setProperty('--border-secondary', '#cbd5e1');
+      root.style.setProperty('--divider', '#f1f5f9');
     }
 
-    // Apply accent color CSS variables
-    const colors = accentColors[accent] || accentColors.blue;
-    console.log('ThemeContext - applying accent color:', accent, colors);
+    // Apply accent color CSS variables - ensure we have a valid accent color
+    const validAccent = accent && accentColors[accent] ? accent : 'blue';
+    const colors = accentColors[validAccent];
+    console.log('ThemeContext - applying accent color:', validAccent, colors);
     
     // Set CSS custom properties for the accent color
     Object.entries(colors).forEach(([shade, color]) => {
@@ -256,13 +285,41 @@ export function ThemeProvider({ children }) {
     }
   };
 
+  const changeAccentColor = async (newAccentColor) => {
+    console.log('ThemeContext - changeAccentColor called with:', newAccentColor);
+    
+    // Update local state immediately
+    setAccentColor(newAccentColor);
+    updateDocumentTheme(isDark, newAccentColor);
+    
+    // Try to sync with server if user is authenticated
+    const user = auth.currentUser;
+    if (user && user.uid) {
+      try {
+        const updateSettings = useSettings.getState().updateSettings;
+        await updateSettings(user.uid, { accentColor: newAccentColor });
+        console.log('ThemeContext - accent color sync success');
+      } catch (error) {
+        console.error('ThemeContext - accent color sync failed:', error);
+      }
+    }
+    
+    // Always store in localStorage as fallback
+    try {
+      localStorage.setItem('accent-color-preference', newAccentColor);
+    } catch (e) {
+      console.warn('Could not save accent color to localStorage:', e);
+    }
+  };
+
   const value = {
     isDark,
     accentColor,
     accentColors,
     theme: settings.theme,
     toggleTheme,
-    setTheme
+    setTheme,
+    changeAccentColor
   };
 
   return (

@@ -220,9 +220,54 @@ export const useStore = create(
       },
 
       toggleTaskCompletion: async (taskId) => {
+        console.log('🔄 toggleTaskCompletion called with taskId:', taskId);
+        
         const state = get();
-        const task = state.tasks.find(t => t.id === taskId);
-        if (!task) return;
+        console.log('📊 Current state tasks count:', state.tasks.length);
+        console.log('📋 Available task IDs:', state.tasks.map(t => ({ id: t.id, title: t.title })));
+        
+        let task = state.tasks.find(t => t.id === taskId);
+        
+        if (!task) {
+          console.error('❌ Task not found in local state!');
+          console.error('🔍 Searched for taskId:', taskId);
+          console.error('📝 Available tasks:', state.tasks.map(t => ({
+            id: t.id,
+            title: t.title,
+            completed: t.completed
+          })));
+          
+          // Try to reload tasks and find the task
+          console.log('🔄 Attempting to reload tasks...');
+          const user = auth?.currentUser;
+          if (user) {
+            try {
+              await get().loadAllUserData(user.uid);
+              const refreshedState = get();
+              task = refreshedState.tasks.find(t => t.id === taskId);
+              
+              if (!task) {
+                console.warn('⚠️ Task still not found after refresh. This task may have been deleted or is orphaned.');
+                console.log('🧺 SUGGESTION: Use the TaskDebugger Nuclear Reset to clear orphaned tasks');
+                
+                // Instead of throwing an error, just return silently
+                // This prevents the UI from breaking
+                return;
+              }
+              
+              console.log('✅ Task found after refresh:', task.title);
+            } catch (refreshError) {
+              console.error('❌ Failed to refresh tasks:', refreshError);
+              console.log('🧺 SUGGESTION: Use TaskDebugger to manually sync your tasks');
+              return; // Return instead of throwing to prevent UI breakage
+            }
+          } else {
+            console.error('❌ No authenticated user found');
+            return; // Return instead of throwing
+          }
+        }
+        
+        console.log('✅ Task found:', { id: task.id, title: task.title, completed: task.completed });
         
         const updatedTask = {
           ...task,
@@ -230,7 +275,16 @@ export const useStore = create(
           completedAt: !task.completed ? new Date().toISOString() : null
         };
         
+        console.log('📝 Updated task data:', {
+          id: updatedTask.id,
+          title: updatedTask.title,
+          completed: updatedTask.completed,
+          completedAt: updatedTask.completedAt
+        });
+        
         try {
+          console.log('📡 Sending PUT request to /api/tasks...');
+          
           // Use API route with Admin SDK
           const response = await fetch('/api/tasks', {
             method: 'PUT',
@@ -240,22 +294,36 @@ export const useStore = create(
             body: JSON.stringify(updatedTask)
           });
           
+          console.log('📡 API Response status:', response.status);
+          
           const result = await response.json();
+          console.log('📡 API Response data:', result);
           
           if (!response.ok) {
-            throw new Error(result.error || 'Failed to toggle task completion');
+            console.error('❌ API Error:', result);
+            console.error('⚠️ This task probably doesn\'t exist in Firestore. Use TaskDebugger to sync.');
+            // Don't throw error - just return silently to prevent UI crashes
+            return;
           }
           
-          console.log('Task completion toggled successfully via API:', taskId);
+          console.log('✅ Task completion toggled successfully via API:', taskId);
           
           // Update local state with the updated task
-          set((state) => ({
-            tasks: state.tasks.map((t) =>
+          set((state) => {
+            const newTasks = state.tasks.map((t) =>
               t.id === taskId ? result.task : t
-            )
-          }));
+            );
+            console.log('📊 Updated local state with', newTasks.length, 'tasks');
+            return { tasks: newTasks };
+          });
         } catch (error) {
-          console.error('Error toggling task completion:', error);
+          console.error('❌ Error toggling task completion:', error);
+          console.error('🔍 Error details:', {
+            message: error.message,
+            stack: error.stack,
+            taskId,
+            taskExists: !!task
+          });
           throw error;
         }
       },
@@ -860,8 +928,23 @@ export const useStore = create(
       name: 'itaskorg-storage',
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
+      // Only persist settings, profile, templates - NOT tasks
+      partialize: (state) => ({
+        settings: state.settings,
+        profile: state.profile,
+        templates: state.templates,
+        groups: state.groups,
+        members: state.members,
+        // Explicitly exclude tasks from persistence
+        // tasks: [] // Never persist tasks
+      }),
       onRehydrateStorage: () => (state) => {
-        return ensureValidState(state);
+        const validState = ensureValidState(state);
+        // Always start with empty tasks array - force load from Firestore
+        return {
+          ...validState,
+          tasks: []
+        };
       }
     }
   )

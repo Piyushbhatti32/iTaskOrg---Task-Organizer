@@ -7,7 +7,9 @@ export async function DELETE(request, { params }) {
       throw new Error('Firebase Admin SDK not initialized');
     }
 
-    const { id: templateId } = params;
+    // Await params for Next.js 15 compatibility
+    const resolvedParams = await params;
+    const { id: templateId } = resolvedParams;
 
     if (!templateId) {
       return new Response(JSON.stringify({ 

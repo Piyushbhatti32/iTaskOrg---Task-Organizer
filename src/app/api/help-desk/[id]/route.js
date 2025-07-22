@@ -2,7 +2,9 @@ import { updateDocument, deleteDocument } from '../../../../utils/db';
 
 export async function PATCH(req, { params }) {
   try {
-    const { id } = params;
+    // Await params for Next.js 15 compatibility
+    const resolvedParams = await params;
+    const { id } = resolvedParams;
     const updates = await req.json();
 
     await updateDocument('helpDeskTickets', id, {
@@ -20,7 +22,9 @@ export async function PATCH(req, { params }) {
 
 export async function DELETE(req, { params }) {
   try {
-    const { id } = params;
+    // Await params for Next.js 15 compatibility
+    const resolvedParams = await params;
+    const { id } = resolvedParams;
     await deleteDocument('helpDeskTickets', id);
 
     return new Response(JSON.stringify({ message: 'Ticket deleted successfully' }), {

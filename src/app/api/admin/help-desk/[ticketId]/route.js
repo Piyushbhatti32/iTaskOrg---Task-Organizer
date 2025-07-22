@@ -3,7 +3,9 @@ import { db } from '../../../../../config/firebase';
 
 export async function GET(req, { params }) {
   try {
-    const { ticketId } = params;
+    // Await params for Next.js 15 compatibility
+    const resolvedParams = await params;
+    const { ticketId } = resolvedParams;
     const docRef = doc(db, 'helpDeskTickets', ticketId);
     const docSnap = await getDoc(docRef);
     
@@ -22,7 +24,9 @@ export async function GET(req, { params }) {
 
 export async function PATCH(req, { params }) {
   try {
-    const { ticketId } = params;
+    // Await params for Next.js 15 compatibility
+    const resolvedParams = await params;
+    const { ticketId } = resolvedParams;
     const updates = await req.json();
     
     // Add timestamp for updates

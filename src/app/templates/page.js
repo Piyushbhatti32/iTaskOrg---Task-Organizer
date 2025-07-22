@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useTemplates, useAddTemplate, useUpdateTemplate, useDeleteTemplate, useAddTask, useStore } from '../../store';
 import { useTheme } from '../../contexts/ThemeContext';
+import { auth } from '../../config/firebase';
 
 // Template form component for adding/editing templates
 function TemplateForm({ onSubmit, initialData = null, onCancel }) {
@@ -38,7 +39,7 @@ function TemplateForm({ onSubmit, initialData = null, onCancel }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className={`space-y-6 backdrop-blur-sm p-8 rounded-2xl shadow-lg mb-8 border transition-all duration-300 ${
+    <form onSubmit={handleSubmit} className={`space-y-6 backdrop-blur-sm p-8 rounded-2xl shadow-lg mb-8 border transition-all duration-300 slide-up stagger-2 hover-lift ${
       isDark 
         ? 'bg-gray-900/70 border-gray-700' 
         : 'bg-white/80 border-gray-100'
@@ -151,16 +152,21 @@ function TemplateForm({ onSubmit, initialData = null, onCancel }) {
       
       <button
         type="submit"
-        className="w-full text-white py-3 px-4 rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 font-medium shadow-lg transform hover:scale-[1.02] active:scale-[0.98]"
+        className="w-full text-white py-3 px-4 rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 font-medium shadow-lg transform hover:scale-[1.02] active:scale-[0.98] hover-glow"
         style={{
           backgroundColor: `var(--color-primary-500)`,
-          boxShadow: `0 10px 25px -5px var(--color-primary-500)40`
+          boxShadow: `0 10px 25px -5px var(--color-primary-500)40`,
+          ':focus': {
+            ringColor: `var(--color-primary-300)`
+          }
         }}
         onMouseEnter={(e) => {
           e.target.style.filter = 'brightness(1.1)';
+          e.target.style.boxShadow = `0 15px 30px -5px var(--color-primary-500)60`;
         }}
         onMouseLeave={(e) => {
           e.target.style.filter = 'brightness(1)';
+          e.target.style.boxShadow = `0 10px 25px -5px var(--color-primary-500)40`;
         }}
       >
         {initialData ? 'Update Template' : 'Add Template'}
@@ -208,10 +214,21 @@ function TemplateItem({ template, onEdit, onDelete, onUse }) {
   };
 
   const priorityStyle = getPriorityStyle(template.priority);
+  
+  const handleDelete = () => {
+    if (showConfirmDelete) {
+      onDelete(template.id);
+      setShowConfirmDelete(false);
+    } else {
+      setShowConfirmDelete(true);
+      // Auto-cancel after 3 seconds
+      setTimeout(() => setShowConfirmDelete(false), 3000);
+    }
+  };
 
   return (
     <div
-      className={`backdrop-blur-sm p-6 rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl group ${
+      className={`backdrop-blur-sm p-6 rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl group slide-up hover-lift ${
         isDark 
           ? 'bg-gray-900/80 border-gray-700 hover:bg-gray-900/90' 
           : 'bg-white/80 border-gray-100 hover:bg-white/90'
@@ -400,14 +417,25 @@ export default function TemplatesPage() {
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
-  const handleSubmit = (templateData) => {
-    if (editingTemplate) {
-      updateTemplate(templateData);
-      setEditingTemplate(null);
-      showSuccessMessage('Template updated successfully! 🎉');
-    } else {
-      addTemplate(templateData);
-      showSuccessMessage('Template created successfully! ✨');
+  const handleSubmit = async (templateData) => {
+    try {
+      if (editingTemplate) {
+        await updateTemplate(templateData);
+        setEditingTemplate(null);
+        showSuccessMessage('Template updated successfully! 🎉');
+      } else {
+        // Get current user from auth
+        const user = auth?.currentUser;
+        if (user) {
+          await addTemplate(user.uid, templateData);
+          showSuccessMessage('Template created successfully! ✨');
+        } else {
+          throw new Error('User must be authenticated to create templates');
+        }
+      }
+    } catch (error) {
+      console.error('Error handling template:', error);
+      showSuccessMessage('Error: ' + error.message);
     }
   };
 
@@ -429,7 +457,7 @@ export default function TemplatesPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
-      <div className="mb-8">
+      <div className="mb-8 slide-up stagger-1">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-3">
           Templates
         </h1>
@@ -450,7 +478,7 @@ export default function TemplatesPage() {
 
       <div className="space-y-6">
         {templates.length === 0 ? (
-          <div className={`text-center py-12 rounded-2xl border-2 border-dashed transition-all duration-300 ${
+          <div className={`text-center py-12 rounded-2xl border-2 border-dashed transition-all duration-300 slide-up stagger-4 ${
             isDark 
               ? 'bg-gray-800/50 border-gray-600 text-gray-400' 
               : 'bg-gray-50/50 border-gray-200 text-gray-500'
@@ -458,14 +486,15 @@ export default function TemplatesPage() {
             <p className="text-lg">No templates yet. Create your first template to get started! ✨</p>
           </div>
         ) : (
-          templates.map(template => (
-              <TemplateItem
-                key={template.id}
-                template={template}
-                onEdit={setEditingTemplate}
-                onDelete={handleDelete}
-                onUse={handleUseTemplate}
-              />
+          templates.map((template, index) => (
+              <div key={template.id} className={`slide-up stagger-${Math.min(index + 4, 8)}`}>
+                <TemplateItem
+                  template={template}
+                  onEdit={setEditingTemplate}
+                  onDelete={handleDelete}
+                  onUse={handleUseTemplate}
+                />
+              </div>
           ))
         )}
       </div>
