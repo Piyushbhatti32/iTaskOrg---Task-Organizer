@@ -131,7 +131,39 @@ export default function AdminHelpDeskPage() {
     try {
       console.log('🔍 Fetching tickets from admin API...');
       
-      const response = await fetch('/api/admin/help-desk');
+      if (!user) {
+        console.error('❌ No authenticated user for admin API call');
+        setTickets([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Get ID token for authentication
+      const token = await user.getIdToken();
+      console.log('🔑 Got auth token for user:', user.email);
+      
+      const response = await fetch('/api/admin/help-desk', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('🔍 Admin API response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('❌ Admin API error:', response.status, errorData);
+        
+        if (response.status === 401 || response.status === 403) {
+          console.error('❌ Authentication/authorization failed - user may not be admin');
+        }
+        
+        setTickets([]);
+        return;
+      }
+      
       const data = await response.json();
       
       console.log('🔍 Admin API response type:', typeof data);
@@ -156,9 +188,13 @@ export default function AdminHelpDeskPage() {
 
   const updateTicketStatus = async (ticketId, newStatus) => {
     try {
+      const token = await user.getIdToken();
       await fetch(`/api/admin/help-desk/${ticketId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json' 
+        },
         body: JSON.stringify({ status: newStatus, updatedBy: user.uid }),
       });
       fetchAllTickets();
@@ -172,9 +208,13 @@ export default function AdminHelpDeskPage() {
 
   const assignTicket = async (ticketId, assigneeId) => {
     try {
+      const token = await user.getIdToken();
       await fetch(`/api/admin/help-desk/${ticketId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json' 
+        },
         body: JSON.stringify({ 
           assignedTo: assigneeId,
           assignedBy: user.uid,
@@ -195,9 +235,13 @@ export default function AdminHelpDeskPage() {
 
     setAddingNote(true);
     try {
+      const token = await user.getIdToken();
       await fetch(`/api/admin/help-desk/${selectedTicket.id}/notes`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json' 
+        },
         body: JSON.stringify({
           note: newNote,
           authorId: user.uid,
@@ -208,7 +252,12 @@ export default function AdminHelpDeskPage() {
       
       setNewNote('');
       // Refresh ticket details
-      const response = await fetch(`/api/admin/help-desk/${selectedTicket.id}`);
+      const response = await fetch(`/api/admin/help-desk/${selectedTicket.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       const updatedTicket = await response.json();
       setSelectedTicket(updatedTicket);
     } catch (error) {

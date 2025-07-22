@@ -20,7 +20,12 @@ export async function GET(request) {
     const decodedToken = await adminAuth.verifyIdToken(token);
     
     // Check if user is admin
-    const adminEmails = ['itaskorg+admin@gmail.com', 'itaskorg+support@gmail.com'];
+    const adminEmails = [
+      'itaskorg@gmail.com',
+      'itaskorg+admin@gmail.com', 
+      'itaskorg+support@gmail.com',
+      'piyushbhatti32@gmail.com'
+    ];
     if (!adminEmails.includes(decodedToken.email?.toLowerCase())) {
       return new Response(JSON.stringify({ error: 'Forbidden - Admin access required' }), {
         status: 403,

@@ -4,7 +4,7 @@ const ADMIN_USERS = [
   'itaskorg@gmail.com',
   'itaskorg+admin@gmail.com',
   'itaskorg+support@gmail.com',
-  'piyushbhatt32@gmail.com',
+  'piyushbhatti32@gmail.com',
 ];
 
 // Temporary: Allow admin access for anyone during development
