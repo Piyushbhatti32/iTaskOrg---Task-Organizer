@@ -1,7 +1,4 @@
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../../../../../config/firebase';
-
-import { adminAuth } from '../../../../../config/firebase-admin';
+import { adminDb, adminAuth } from '../../../../../config/firebase-admin';
 
 export async function GET(req, { params }) {
   try {
@@ -17,13 +14,22 @@ export async function GET(req, { params }) {
     const token = authHeader.split('Bearer ')[1];
     await adminAuth.verifyIdToken(token);
     
+    // Check if Admin SDK is initialized
+    if (!adminDb) {
+      console.error('❌ Firebase Admin SDK not initialized');
+      return new Response(JSON.stringify({ error: 'Firebase Admin SDK not initialized' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
     // Await params for Next.js 15 compatibility
     const resolvedParams = await params;
     const { ticketId } = resolvedParams;
-    const docRef = doc(db, 'helpDeskTickets', ticketId);
-    const docSnap = await getDoc(docRef);
+    const docRef = adminDb.collection('helpDeskTickets').doc(ticketId);
+    const docSnap = await docRef.get();
     
-    if (!docSnap.exists()) {
+    if (!docSnap.exists) {
       return new Response(JSON.stringify({ error: 'Ticket not found' }), { status: 404 });
     }
 
@@ -50,6 +56,15 @@ export async function PATCH(req, { params }) {
     const token = authHeader.split('Bearer ')[1];
     await adminAuth.verifyIdToken(token);
     
+    // Check if Admin SDK is initialized
+    if (!adminDb) {
+      console.error('❌ Firebase Admin SDK not initialized');
+      return new Response(JSON.stringify({ error: 'Firebase Admin SDK not initialized' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
     // Await params for Next.js 15 compatibility
     const resolvedParams = await params;
     const { ticketId } = resolvedParams;
@@ -61,8 +76,8 @@ export async function PATCH(req, { params }) {
       updatedAt: new Date().toISOString()
     };
 
-    const docRef = doc(db, 'helpDeskTickets', ticketId);
-    await updateDoc(docRef, updateData);
+    const docRef = adminDb.collection('helpDeskTickets').doc(ticketId);
+    await docRef.update(updateData);
 
     return new Response(JSON.stringify({ 
       message: 'Ticket updated successfully',

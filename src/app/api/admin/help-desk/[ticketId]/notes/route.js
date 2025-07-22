@@ -1,8 +1,29 @@
-import { adminDb } from '../../../../../../config/firebase-admin';
+import { adminDb, adminAuth } from '../../../../../../config/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(req, { params }) {
   try {
+    // Verify authentication token
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const token = authHeader.split('Bearer ')[1];
+    await adminAuth.verifyIdToken(token);
+    
+    // Check if Admin SDK is initialized
+    if (!adminDb) {
+      console.error('❌ Firebase Admin SDK not initialized');
+      return new Response(JSON.stringify({ error: 'Firebase Admin SDK not initialized' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
     const { ticketId } = params;
     const { note, authorId, authorName, isInternal = true } = await req.json();
     

@@ -1,6 +1,4 @@
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../../../../config/firebase';
-import { adminAuth } from '../../../../config/firebase-admin';
+import { adminDb, adminAuth } from '../../../../config/firebase-admin';
 import { NextRequest } from 'next/server';
 
 export async function GET(request) {
@@ -35,12 +33,21 @@ export async function GET(request) {
     
     console.log('🔍 Admin access verified for:', decodedToken.email);
     
-    // Simple approach: just get all documents from the collection
-    console.log('🔍 Getting collection reference...');
-    const collectionRef = collection(db, 'helpDeskTickets');
+    // Check if Admin SDK is initialized
+    if (!adminDb) {
+      console.error('❌ Firebase Admin SDK not initialized');
+      return new Response(JSON.stringify({ error: 'Firebase Admin SDK not initialized' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Use Firebase Admin SDK to get all documents from the collection
+    console.log('🔍 Getting collection reference with Admin SDK...');
+    const collectionRef = adminDb.collection('helpDeskTickets');
     
     console.log('🔍 Fetching all documents...');
-    const snapshot = await getDocs(collectionRef);
+    const snapshot = await collectionRef.get();
     
     console.log('🔍 Processing documents, count:', snapshot.size);
     const tickets = [];
