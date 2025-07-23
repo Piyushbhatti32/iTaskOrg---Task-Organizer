@@ -1,5 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { 
+  sendTaskAssignmentPushNotification,
+  sendGroupInvitationPushNotification,
+  sendTeamInvitationPushNotification,
+  sendTaskCompletionPushNotification,
+  isPushNotificationSupported
+} from '@/utils/pushNotifications';
 
 export function useNotifications() {
   const { user } = useAuth();
@@ -42,6 +49,46 @@ export function useNotifications() {
       try {
         const notification = JSON.parse(event.data);
         setNotifications(prev => [notification, ...prev]);
+        
+        // Send push notification if supported and enabled
+        if (isPushNotificationSupported()) {
+          const { type, data } = notification;
+          
+          switch (type) {
+            case 'task':
+              if (data?.type === 'task_assignment') {
+                sendTaskAssignmentPushNotification(
+                  data.taskTitle,
+                  data.assignedBy,
+                  data.taskId
+                );
+              } else if (data?.type === 'task_completion') {
+                sendTaskCompletionPushNotification(
+                  data.taskTitle,
+                  data.taskId
+                );
+              }
+              break;
+            case 'group':
+              if (data?.type === 'group_invitation') {
+                sendGroupInvitationPushNotification(
+                  data.groupName,
+                  data.invitedBy,
+                  data.groupId
+                );
+              }
+              break;
+            case 'team':
+              if (data?.type === 'team_invitation') {
+                sendTeamInvitationPushNotification(
+                  data.teamName,
+                  data.invitedBy,
+                  data.teamId
+                );
+              }
+              break;
+          }
+        }
       } catch (error) {
         console.error('Error parsing notification:', error);
       }

@@ -946,7 +946,7 @@ onClick={() => handleToggleTaskCompletion(task.id)}
                   {task.dueDate && (
                     <div className={`flex items-center gap-2 ${isDark ? 'bg-gray-800/50 text-gray-300' : 'bg-gray-50 text-gray-700'} px-3 py-1.5 rounded-full`}>
                       <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                      <span className="text-xs sm:text-sm">{new Date(task.dueDate).toLocaleDateString()}</span>
+                      		<span className="text-xs sm:text-sm">{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}</span>
                     </div>
                   )}
                   {task.category && (

@@ -73,6 +73,50 @@ function ThemeSettings({ settings, onUpdate }) {
 // Notification settings component
 function NotificationSettings({ settings, onUpdate }) {
   const { isDark } = useTheme();
+  const [permissionStatus, setPermissionStatus] = React.useState('default');
+  
+  // Import push notification functions dynamically
+  const [pushNotificationUtils, setPushNotificationUtils] = React.useState(null);
+  
+  React.useEffect(() => {
+    import('@/utils/pushNotifications').then((utils) => {
+      setPushNotificationUtils(utils);
+      setPermissionStatus(utils.getNotificationPermission());
+    });
+  }, []);
+  
+  const handlePushNotificationToggle = async (checked) => {
+    if (checked && pushNotificationUtils) {
+      const permission = await pushNotificationUtils.requestNotificationPermission();
+      setPermissionStatus(permission);
+      
+      if (permission === 'granted') {
+        onUpdate({ pushNotifications: true });
+      } else {
+        // If permission denied, keep checkbox unchecked
+        onUpdate({ pushNotifications: false });
+      }
+    } else {
+      onUpdate({ pushNotifications: false });
+    }
+  };
+  
+  const getPushNotificationStatus = () => {
+    if (!('Notification' in window)) {
+      return 'Not supported by your browser';
+    }
+    
+    switch (permissionStatus) {
+      case 'granted':
+        return 'Enabled';
+      case 'denied':
+        return 'Blocked (check your browser settings)';
+      case 'default':
+        return 'Click to enable';
+      default:
+        return 'Unknown status';
+    }
+  };
   
   return (
     <div className={`${isDark ? 'bg-gray-900/70' : 'bg-white/70'} backdrop-blur-sm p-6 rounded-2xl shadow-lg border ${isDark ? 'border-gray-700/50' : 'border-white/20'} mb-6 transition-all duration-300 hover:shadow-xl ${isDark ? 'hover:bg-gray-900/80' : 'hover:bg-white/80'} animate-slide-up stagger-2 hover:animate-lift`}>
@@ -96,14 +140,18 @@ function NotificationSettings({ settings, onUpdate }) {
           <label className="flex items-center">
             <input
               type="checkbox"
-              checked={settings.pushNotifications}
-              onChange={(e) => onUpdate({ pushNotifications: e.target.checked })}
-              className="mr-3 w-4 h-4 text-blue-600 focus:ring-blue-500"
+              checked={settings.pushNotifications && permissionStatus === 'granted'}
+              onChange={(e) => handlePushNotificationToggle(e.target.checked)}
+              disabled={permissionStatus === 'denied' || !('Notification' in window)}
+              className="mr-3 w-4 h-4 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
             />
             Push Notifications
           </label>
           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} ml-6`}>
             Receive browser notifications for task updates
+          </p>
+          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} ml-6 mt-1`}>
+            Status: {getPushNotificationStatus()}
           </p>
         </div>
         <div>
@@ -118,6 +166,20 @@ function NotificationSettings({ settings, onUpdate }) {
           </label>
           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} ml-6`}>
             Play sounds for notifications and timer completion
+          </p>
+        </div>
+        <div>
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={settings.inAppNotifications !== false}
+              onChange={(e) => onUpdate({ inAppNotifications: e.target.checked })}
+              className="mr-3 w-4 h-4 text-blue-600 focus:ring-blue-500"
+            />
+            In-App Notifications
+          </label>
+          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} ml-6`}>
+            Show notifications within the application
           </p>
         </div>
       </div>

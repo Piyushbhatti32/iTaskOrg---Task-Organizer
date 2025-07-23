@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTasks } from '../../store';
 import { useTheme } from '../../contexts/ThemeContext';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
+import { isValidDate } from '../../utils/dateUtils';
 
 // Task statistics calculation
 function calculateTaskStats(tasks) {
@@ -13,7 +14,7 @@ function calculateTaskStats(tasks) {
   const totalTasks = tasks.length;
   const highPriorityTasks = tasks.filter(t => t?.priority === 'high').length;
   const overdueTasks = tasks.filter(t => {
-    if (!t?.dueDate) return false;
+    if (!t?.dueDate || !isValidDate(t.dueDate)) return false;
     const dueDate = new Date(t.dueDate);
     return !t.completed && dueDate < new Date();
   }).length;
@@ -36,7 +37,7 @@ function WeeklyChart({ tasks, isDark }) {
 
   const getTasksForDay = (date) => {
     return tasks.filter(task => {
-      if (!task?.completedAt) return false;
+      if (!task?.completedAt || !isValidDate(task.completedAt)) return false;
       const completionDate = new Date(task.completedAt);
       return format(completionDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
     }).length;
@@ -46,13 +47,13 @@ function WeeklyChart({ tasks, isDark }) {
   const barHeight = (count) => (maxTasks > 0 ? (count / maxTasks) * 100 : 0);
 
   return (
-    <div className={`slide-up stagger-5 mt-8 backdrop-blur-sm rounded-2xl shadow-lg border p-6 transition-all duration-300 hover:shadow-xl ${
+    <div className={`slide-up stagger-5 mt-6 sm:mt-8 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border p-3 sm:p-4 md:p-6 transition-all duration-300 hover:shadow-xl ${
       isDark 
         ? 'bg-gray-800/70 border-gray-700/30 hover:bg-gray-800/80' 
         : 'bg-white/70 border-white/20 hover:bg-white/80'
     }`}>
-      <h3 className="text-xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Weekly Task Completion</h3>
-      <div className="flex items-end justify-between h-40 gap-2">
+      <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Weekly Task Completion</h3>
+      <div className="flex items-end justify-between h-32 sm:h-40 gap-1 sm:gap-2">
         {weekDays.map(day => {
           const taskCount = getTasksForDay(day);
           return (
@@ -61,9 +62,12 @@ function WeeklyChart({ tasks, isDark }) {
                 className="w-full bg-gradient-to-t from-blue-600 to-purple-600 rounded-t transition-all duration-300"
                 style={{ height: `${barHeight(taskCount)}%` }}
               />
-              <div className={`text-xs mt-2 font-medium ${
+              <div className={`text-xs mt-1 sm:mt-2 font-medium ${
                 isDark ? 'text-gray-300' : 'text-gray-600'
-              }`}>{format(day, 'EEE')}</div>
+              }`}>
+                <span className="hidden sm:inline">{format(day, 'EEE')}</span>
+                <span className="sm:hidden">{format(day, 'EEEEE')}</span>
+              </div>
               <div className={`text-xs font-bold ${
                 isDark ? 'text-gray-100' : 'text-gray-800'
               }`}>{taskCount}</div>
@@ -89,22 +93,22 @@ function PriorityChart({ tasks, isDark }) {
   const getPercentage = (count) => (total > 0 ? (count / total) * 100 : 0);
 
   return (
-    <div className={`slide-up stagger-6 mt-8 backdrop-blur-sm rounded-2xl shadow-lg border p-6 transition-all duration-300 hover:shadow-xl ${
+    <div className={`slide-up stagger-6 mt-6 sm:mt-8 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border p-3 sm:p-4 md:p-6 transition-all duration-300 hover:shadow-xl ${
       isDark 
         ? 'bg-gray-800/70 border-gray-700/30 hover:bg-gray-800/80' 
         : 'bg-white/70 border-white/20 hover:bg-white/80'
     }`}>
-      <h3 className="text-xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Task Priority Distribution</h3>
-      <div className="space-y-4">
+      <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Task Priority Distribution</h3>
+      <div className="space-y-3 sm:space-y-4">
         {Object.entries(priorityCounts).map(([priority, count]) => (
           <div key={priority}>
-            <div className="flex justify-between text-sm mb-2">
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0 text-xs sm:text-sm mb-2">
               <span className={`capitalize font-medium ${
                 isDark ? 'text-gray-300' : 'text-gray-700'
               }`}>{priority}</span>
-              <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>{count} tasks ({Math.round(getPercentage(count))}%)</span>
+              <span className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-right sm:text-left`}>{count} tasks ({Math.round(getPercentage(count))}%)</span>
             </div>
-            <div className={`h-3 rounded-full overflow-hidden ${
+            <div className={`h-2 sm:h-3 rounded-full overflow-hidden ${
               isDark ? 'bg-gray-700' : 'bg-gray-200'
             }`}>
               <div
@@ -132,7 +136,7 @@ export default function StatsPage() {
     ? tasks.filter(task => {
         if (!task) return false;
         if (timeRange === 'all') return true;
-        if (!task.createdAt) return false;
+        if (!task.createdAt || !isValidDate(task.createdAt)) return false;
         const taskDate = new Date(task.createdAt);
         const now = new Date();
         if (timeRange === 'week') {
@@ -154,7 +158,7 @@ export default function StatsPage() {
         ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900' 
         : 'bg-gradient-to-br from-blue-50 via-purple-50/50 to-pink-50'
     }`}>
-      <div className="max-w-4xl mx-auto py-8 px-4">
+      <div className="max-w-7xl mx-auto py-4 sm:py-6 md:py-8 px-3 sm:px-4 md:px-6">
         <div className="relative mb-8">
           <div className={`absolute inset-0 rounded-3xl -z-10 ${
             isDark 
@@ -163,7 +167,7 @@ export default function StatsPage() {
           }`} />
           <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] opacity-40 -z-10" />
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text">Statistics</h1>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text">Statistics</h1>
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value)}
@@ -183,18 +187,18 @@ export default function StatsPage() {
         </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className={`slide-up hover-lift stagger-1 backdrop-blur-sm p-6 rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-8">
+          <div className={`slide-up hover-lift stagger-1 backdrop-blur-sm p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
             isDark 
               ? 'bg-gray-800/70 border-gray-700/30 hover:bg-gray-800/80' 
               : 'bg-white/70 border-white/20 hover:bg-white/80'
           }`}>
-            <h3 className={`font-medium mb-2 ${
+            <h3 className={`text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${
               isDark ? 'text-gray-400' : 'text-gray-600'
             }`}>Total Tasks</h3>
-            <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{stats.total}</p>
+            <p className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{stats.total}</p>
           </div>
-          <div className={`slide-up hover-lift stagger-2 backdrop-blur-sm p-6 rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
+          <div className={`slide-up hover-lift stagger-2 backdrop-blur-sm p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
             isDark 
               ? 'bg-gray-800/70 border-gray-700/30 hover:bg-gray-800/80' 
               : 'bg-white/70 border-white/20 hover:bg-white/80'
@@ -202,9 +206,9 @@ export default function StatsPage() {
             <h3 className={`font-medium mb-2 ${
               isDark ? 'text-gray-400' : 'text-gray-600'
             }`}>Completed Tasks</h3>
-            <p className="text-3xl font-bold text-green-600">{stats.completed}</p>
+            <p className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600">{stats.completed}</p>
           </div>
-          <div className={`slide-up hover-lift stagger-3 backdrop-blur-sm p-6 rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
+          <div className={`slide-up hover-lift stagger-3 backdrop-blur-sm p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
             isDark 
               ? 'bg-gray-800/70 border-gray-700/30 hover:bg-gray-800/80' 
               : 'bg-white/70 border-white/20 hover:bg-white/80'
@@ -212,9 +216,9 @@ export default function StatsPage() {
             <h3 className={`font-medium mb-2 ${
               isDark ? 'text-gray-400' : 'text-gray-600'
             }`}>High Priority</h3>
-            <p className="text-3xl font-bold text-orange-600">{stats.highPriority}</p>
+            <p className="text-xl sm:text-2xl md:text-3xl font-bold text-orange-600">{stats.highPriority}</p>
           </div>
-          <div className={`slide-up hover-lift stagger-4 backdrop-blur-sm p-6 rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
+          <div className={`slide-up hover-lift stagger-4 backdrop-blur-sm p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
             isDark 
               ? 'bg-gray-800/70 border-gray-700/30 hover:bg-gray-800/80' 
               : 'bg-white/70 border-white/20 hover:bg-white/80'
@@ -222,7 +226,7 @@ export default function StatsPage() {
             <h3 className={`font-medium mb-2 ${
               isDark ? 'text-gray-400' : 'text-gray-600'
             }`}>Overdue Tasks</h3>
-            <p className="text-3xl font-bold text-red-600">{stats.overdue}</p>
+            <p className="text-xl sm:text-2xl md:text-3xl font-bold text-red-600">{stats.overdue}</p>
           </div>
         </div>
 

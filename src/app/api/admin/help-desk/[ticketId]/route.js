@@ -1,4 +1,5 @@
 import { adminDb, adminAuth } from '../../../../../config/firebase-admin';
+import { sendTicketStatusUpdateToUser } from '../../../../../utils/emailService';
 
 export async function GET(req, { params }) {
   try {
@@ -77,7 +78,30 @@ export async function PATCH(req, { params }) {
     };
 
     const docRef = adminDb.collection('helpDeskTickets').doc(ticketId);
+    
+    // Get current ticket data before update to check for status changes
+    const currentTicket = await docRef.get();
+    const currentData = currentTicket.data();
+    
     await docRef.update(updateData);
+    
+    // Send email notification if status changed or if it's a significant update
+    if (currentData && (updates.status || updates.assignedTo)) {
+      const updatedTicketData = {
+        ticketNumber: currentData.ticketNumber,
+        title: currentData.title,
+        status: updates.status || currentData.status,
+        assignedTo: updates.assignedTo || currentData.assignedTo,
+        userName: currentData.userName
+      };
+      
+      // Send notification to the user who created the ticket
+      sendTicketStatusUpdateToUser(currentData.userEmail, updatedTicketData)
+        .catch(error => {
+          console.error('Failed to send ticket update email to user:', error);
+          // Don't fail the update if email fails
+        });
+    }
 
     return new Response(JSON.stringify({ 
       message: 'Ticket updated successfully',

@@ -14,6 +14,7 @@ import {
   X,
   Send
 } from 'lucide-react';
+import { isValidDate, safeFormatDateTime } from '../../utils/dateUtils';
 
 export default function HelpDeskPage() {
   const { user } = useAuth();
@@ -152,21 +153,22 @@ export default function HelpDeskPage() {
   };
 
   const formatDate = (date) => {
-    if (!date) return 'N/A';
+    if (!date) return 'Unknown date';
     
     try {
       const d = date.toDate ? date.toDate() : new Date(date);
       
-      // Check if the date is valid
-      if (isNaN(d.getTime())) {
+      // Check if the date is valid using our utility
+      if (!isValidDate(d)) {
         console.warn('Invalid date encountered:', date);
-        return 'Invalid Date';
+        return 'Unknown date';
       }
       
-      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      // Use our safe formatter
+      return safeFormatDateTime(d);
     } catch (error) {
       console.error('Error formatting date:', error, 'Original date:', date);
-      return 'Invalid Date';
+      return 'Unknown date';
     }
   };
 

@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '../../store';
 import { useTheme } from '../../contexts/ThemeContext';
+import { isValidDate, safeFormatDate } from '../../utils/dateUtils';
 import { 
   format, 
   startOfMonth, 
@@ -99,26 +100,30 @@ function CalendarGrid({ selectedDate, onSelectDate, tasks }) {
   const getTasksForDay = (date) => {
     if (!Array.isArray(tasks)) return [];
     return tasks.filter(task => {
-      if (!task || !task.dueDate) return false;
+      if (!task || !task.dueDate || !isValidDate(task.dueDate)) return false;
       const taskDate = new Date(task.dueDate);
       return isSameDay(taskDate, date);
     });
   };
 
   return (
-    <div className={`grid grid-cols-7 gap-1.5 p-1 rounded-xl ${
+    <div className={`grid grid-cols-7 gap-1 sm:gap-1.5 p-1 rounded-xl ${
       isDark ? 'bg-gray-800/50' : 'bg-gray-100/50'
     }`}>
       {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-        <div key={day} className={`text-center font-medium py-2 text-sm ${
+        <div key={day} className={`text-center font-medium py-1 sm:py-2 text-xs sm:text-sm ${
           isDark ? 'text-gray-400' : 'text-gray-500'
         }`}>
-          {day}
+          <span className="hidden sm:inline">{day}</span>
+          <span className="sm:hidden">{day.slice(0, 1)}</span>
         </div>
       ))}
       {days.map(day => {
         const dayTasks = getTasksForDay(day);
-        const hasOverdue = dayTasks.some(task => !task.completed && new Date(task.dueDate) < new Date());
+        const hasOverdue = dayTasks.some(task => {
+          if (!task.dueDate || !isValidDate(task.dueDate)) return false;
+          return !task.completed && new Date(task.dueDate) < new Date();
+        });
         const hasCompleted = dayTasks.some(task => task.completed);
 
         return (
@@ -126,9 +131,9 @@ function CalendarGrid({ selectedDate, onSelectDate, tasks }) {
             key={day.toString()}
             onClick={() => onSelectDate(day)}
             className={`
-              p-1 h-24 relative transition-all duration-200
+              p-0.5 sm:p-1 aspect-square w-full relative transition-all duration-200
               hover:scale-[1.02] hover:shadow-lg hover:z-10
-              backdrop-blur-sm rounded-xl
+              backdrop-blur-sm rounded-lg sm:rounded-xl
               ${!isSameMonth(day, selectedDate) 
                 ? isDark 
                   ? 'bg-gray-800/30 hover:bg-gray-800/50' 
@@ -138,8 +143,8 @@ function CalendarGrid({ selectedDate, onSelectDate, tasks }) {
                   : 'bg-white hover:bg-white shadow-sm'}
               ${isToday(day) 
                 ? isDark 
-                  ? 'ring-2 ring-blue-400/40 bg-gradient-to-b from-blue-900/30 to-gray-900/50' 
-                  : 'ring-2 ring-blue-500/20 bg-gradient-to-b from-blue-50 to-white'
+                  ? 'ring-1 sm:ring-2 ring-blue-400/40 bg-gradient-to-b from-blue-900/30 to-gray-900/50' 
+                  : 'ring-1 sm:ring-2 ring-blue-500/20 bg-gradient-to-b from-blue-50 to-white'
                 : ''}
               ${isSameDay(day, selectedDate) 
                 ? isDark 
@@ -150,7 +155,7 @@ function CalendarGrid({ selectedDate, onSelectDate, tasks }) {
           >
             <span className={`
               inline-flex items-center justify-center
-              rounded-full w-6 h-6 text-sm font-medium
+              rounded-full w-4 h-4 sm:w-6 sm:h-6 text-xs sm:text-sm font-medium
               transition-colors duration-200
               ${!isSameMonth(day, selectedDate) 
                 ? 'text-gray-400' 
@@ -163,32 +168,35 @@ function CalendarGrid({ selectedDate, onSelectDate, tasks }) {
             </span>
             
             {dayTasks.length > 0 && (
-              <div className="absolute bottom-1 left-1 right-1 space-y-0.5">
+              <div className="absolute bottom-0.5 sm:bottom-1 left-0.5 sm:left-1 right-0.5 sm:right-1 space-y-px sm:space-y-0.5">
                 {hasOverdue && (
-                  <div className={`text-[10px] rounded-full px-1.5 py-px font-medium backdrop-blur-sm ${
+                  <div className={`text-[8px] sm:text-[10px] rounded-full px-1 sm:px-1.5 py-px font-medium backdrop-blur-sm ${
                     isDark 
                       ? 'bg-gradient-to-r from-red-900/70 to-red-800/70 text-red-200' 
                       : 'bg-gradient-to-r from-red-100 to-red-50 text-red-700'
                   }`}>
-                    {dayTasks.filter(t => !t.completed && new Date(t.dueDate) < new Date()).length} overdue
+                    <span className="hidden sm:inline">{dayTasks.filter(t => t.dueDate && isValidDate(t.dueDate) && !t.completed && new Date(t.dueDate) < new Date()).length} overdue</span>
+                    <span className="sm:hidden">{dayTasks.filter(t => t.dueDate && isValidDate(t.dueDate) && !t.completed && new Date(t.dueDate) < new Date()).length}!</span>
                   </div>
                 )}
                 {hasCompleted && (
-                  <div className={`text-[10px] rounded-full px-1.5 py-px font-medium backdrop-blur-sm ${
+                  <div className={`text-[8px] sm:text-[10px] rounded-full px-1 sm:px-1.5 py-px font-medium backdrop-blur-sm ${
                     isDark 
                       ? 'bg-gradient-to-r from-green-900/70 to-green-800/70 text-green-200' 
                       : 'bg-gradient-to-r from-green-100 to-green-50 text-green-700'
                   }`}>
-                    {dayTasks.filter(t => t.completed).length} completed
+                    <span className="hidden sm:inline">{dayTasks.filter(t => t.completed).length} completed</span>
+                    <span className="sm:hidden">{dayTasks.filter(t => t.completed).length}✓</span>
                   </div>
                 )}
-                {dayTasks.filter(t => !t.completed && new Date(t.dueDate) >= new Date()).length > 0 && (
-                  <div className={`text-[10px] rounded-full px-1.5 py-px font-medium backdrop-blur-sm ${
+                {dayTasks.filter(t => t.dueDate && isValidDate(t.dueDate) && !t.completed && new Date(t.dueDate) >= new Date()).length > 0 && (
+                  <div className={`text-[8px] sm:text-[10px] rounded-full px-1 sm:px-1.5 py-px font-medium backdrop-blur-sm ${
                     isDark 
                       ? 'bg-gradient-to-r from-blue-900/70 to-blue-800/70 text-blue-200' 
                       : 'bg-gradient-to-r from-blue-100 to-blue-50 text-blue-700'
                   }`}>
-                    {dayTasks.filter(t => !t.completed && new Date(t.dueDate) >= new Date()).length} pending
+                    <span className="hidden sm:inline">{dayTasks.filter(t => t.dueDate && isValidDate(t.dueDate) && !t.completed && new Date(t.dueDate) >= new Date()).length} pending</span>
+                    <span className="sm:hidden">{dayTasks.filter(t => t.dueDate && isValidDate(t.dueDate) && !t.completed && new Date(t.dueDate) >= new Date()).length}</span>
                   </div>
                 )}
               </div>
@@ -210,7 +218,7 @@ function DayTasks({ date, tasks }) {
     if (!Array.isArray(tasks)) return [];
     
     let filteredTasks = tasks.filter(task => {
-      if (!task || !task.dueDate) return false;
+      if (!task || !task.dueDate || !isValidDate(task.dueDate)) return false;
       const taskDate = new Date(task.dueDate);
       return isSameDay(taskDate, date);
     });
@@ -325,7 +333,7 @@ function DayTasks({ date, tasks }) {
                   </div>
                 )}
               </div>
-              {new Date(task.dueDate) < new Date() && !task.completed && (
+              {task.dueDate && isValidDate(task.dueDate) && new Date(task.dueDate) < new Date() && !task.completed && (
                 <span className={`text-xs font-medium px-2 py-1 rounded-full ${
                   isDark 
                     ? 'bg-red-900/50 text-red-300' 
@@ -357,13 +365,13 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4">
-      <div className={`backdrop-blur-sm rounded-xl shadow-sm p-6 mb-6 ${
+    <div className="max-w-6xl mx-auto py-4 sm:py-6 md:py-8 px-3 sm:px-4 md:px-6">
+      <div className={`backdrop-blur-sm rounded-xl shadow-sm p-3 sm:p-4 md:p-6 mb-4 sm:mb-6 ${
         isDark 
           ? 'bg-gray-900/50 border border-gray-700/50' 
           : 'bg-white/80 border border-gray-200/50'
       }`}>
-        <h1 className={`text-3xl font-bold mb-6 ${
+        <h1 className={`text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 ${
           isDark 
             ? 'bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent' 
             : 'bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent'

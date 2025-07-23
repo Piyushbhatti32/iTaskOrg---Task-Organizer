@@ -733,8 +733,15 @@ export const useStore = create(
       getTasksByDate: (date) => {
         const state = get();
         return state.tasks.filter(task => {
-          const taskDate = new Date(task.dueDate);
-          return taskDate.toDateString() === date.toDateString();
+          if (!task.dueDate) return false;
+          try {
+            const taskDate = new Date(task.dueDate);
+            if (isNaN(taskDate.getTime())) return false;
+            return taskDate.toDateString() === date.toDateString();
+          } catch (error) {
+            console.warn('Invalid date in task:', task.id, task.dueDate);
+            return false;
+          }
         });
       },
 
@@ -779,11 +786,26 @@ export const useStore = create(
         const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
 
         return state.tasks
-          .filter(task => new Date(task.completedAt) >= thirtyDaysAgo)
+          .filter(task => {
+            if (!task.completedAt) return false;
+            try {
+              const completedDate = new Date(task.completedAt);
+              if (isNaN(completedDate.getTime())) return false;
+              return completedDate >= thirtyDaysAgo;
+            } catch (error) {
+              console.warn('Invalid completedAt date in task:', task.id, task.completedAt);
+              return false;
+            }
+          })
           .reduce((acc, task) => {
-            const date = new Date(task.completedAt).toDateString();
-            acc[date] = (acc[date] || 0) + 1;
-            return acc;
+            try {
+              const date = new Date(task.completedAt).toDateString();
+              acc[date] = (acc[date] || 0) + 1;
+              return acc;
+            } catch (error) {
+              console.warn('Error processing date for task:', task.id, task.completedAt);
+              return acc;
+            }
           }, {});
       },
 

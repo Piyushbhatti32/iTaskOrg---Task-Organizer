@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { isAdmin } from '../../../utils/roles';
 import { useRouter } from 'next/navigation';
+import { isValidDate, safeFormatDateTime } from '../../../utils/dateUtils';
 import { 
   Users,
   Search, 
@@ -86,48 +87,8 @@ export default function AdminHelpDeskPage() {
     ...adminUsers.map(admin => ({ value: admin.uid, label: admin.name }))
   ];
 
-  // Check if user is admin
-  useEffect(() => {
-    if (user) {
-      if (isAdmin(user)) {
-        setIsAuthorized(true);
-      } else {
-        setIsAuthorized(false);
-        router.push('/help-desk'); // Redirect non-admin users to regular help desk
-      }
-    } else {
-      setIsAuthorized(null); // Still checking
-    }
-  }, [user, router]);
-
   // Fetch all tickets (admin can see all)
-  useEffect(() => {
-    if (isAuthorized === true) {
-      fetchAllTickets();
-    }
-  }, [isAuthorized]);
-
-  // Filter tickets
-  useEffect(() => {
-    let filtered = Array.isArray(tickets) ? tickets.filter(ticket => {
-      const matchesSearch = ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           ticket.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           ticket.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           ticket.userEmail.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
-      const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter;
-      const matchesAssignee = assigneeFilter === 'all' || 
-                             (assigneeFilter === 'unassigned' && !ticket.assignedTo) ||
-                             ticket.assignedTo === assigneeFilter;
-
-      return matchesSearch && matchesStatus && matchesPriority && matchesAssignee;
-    }) : [];
-
-    setFilteredTickets(filtered);
-  }, [tickets, searchTerm, statusFilter, priorityFilter, assigneeFilter]);
-
-  const fetchAllTickets = async () => {
+  const fetchAllTickets = useCallback(async () => {
     try {
       console.log('🔍 Fetching tickets from admin API...');
       
@@ -184,7 +145,49 @@ export default function AdminHelpDeskPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  // Check if user is admin
+  useEffect(() => {
+    if (user) {
+      if (isAdmin(user)) {
+        setIsAuthorized(true);
+      } else {
+        setIsAuthorized(false);
+        router.push('/help-desk'); // Redirect non-admin users to regular help desk
+      }
+    } else {
+      setIsAuthorized(null); // Still checking
+    }
+  }, [user, router]);
+
+  // Fetch all tickets when authorized
+  useEffect(() => {
+    if (isAuthorized === true) {
+      fetchAllTickets();
+    }
+  }, [isAuthorized, fetchAllTickets]);
+
+  // Filter tickets
+  useEffect(() => {
+    let filtered = Array.isArray(tickets) ? tickets.filter(ticket => {
+      const matchesSearch = ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           ticket.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           ticket.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           ticket.userEmail.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
+      const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter;
+      const matchesAssignee = assigneeFilter === 'all' || 
+                             (assigneeFilter === 'unassigned' && !ticket.assignedTo) ||
+                             ticket.assignedTo === assigneeFilter;
+
+      return matchesSearch && matchesStatus && matchesPriority && matchesAssignee;
+    }) : [];
+
+    setFilteredTickets(filtered);
+  }, [tickets, searchTerm, statusFilter, priorityFilter, assigneeFilter]);
+
 
   const updateTicketStatus = async (ticketId, newStatus) => {
     try {
@@ -271,18 +274,19 @@ export default function AdminHelpDeskPage() {
     if (!date) return 'N/A';
     
     try {
-      const d = date.toDate ? date.toDate() : new Date(date);
+      // Handle Firestore timestamp objects
+      const dateObject = date.toDate ? date.toDate() : new Date(date);
       
-      // Check if the date is valid
-      if (isNaN(d.getTime())) {
+      // Use safe date utilities for consistent validation and formatting
+      if (!isValidDate(dateObject)) {
         console.warn('Invalid date encountered:', date);
-        return 'Invalid Date';
+        return 'Unknown date';
       }
       
-      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return safeFormatDateTime(dateObject);
     } catch (error) {
       console.error('Error formatting date:', error, 'Original date:', date);
-      return 'Invalid Date';
+      return 'Unknown date';
     }
   };
 
@@ -291,13 +295,14 @@ export default function AdminHelpDeskPage() {
   const getStatusInfo = (status) => statusOptions.find(s => s.value === status) || statusOptions[1];
   const getAssigneeInfo = (uid) => adminUsers.find(admin => admin.uid === uid);
 
-  const getTicketStats = () => {
+const getTicketStats = () => {
     const stats = {
       total: tickets.length,
       open: tickets.filter(t => t.status === 'open').length,
       inProgress: tickets.filter(t => t.status === 'in-progress').length,
       resolved: tickets.filter(t => t.status === 'resolved').length,
-      urgent: tickets.filter(t => t.priority === 'urgent').length
+      urgent: tickets.filter(t => t.priority === 'urgent').length,
+      closed: tickets.filter(t => t.status === 'closed').length
     };
     return stats;
   };
@@ -332,7 +337,7 @@ export default function AdminHelpDeskPage() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-6">
             <div className={`p-4 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
               <div className="flex items-center justify-between">
                 <div>
@@ -340,6 +345,16 @@ export default function AdminHelpDeskPage() {
                   <p className={`text-2xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{stats.total}</p>
                 </div>
                 <Users className={`w-8 h-8 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
+              </div>
+            </div>
+            
+            <div className={`p-4 rounded-xl ${isDark ? 'bg-gray-700/30' : 'bg-gray-200'}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Closed</p>
+                  <p className="text-2xl font-bold text-gray-700">{stats.closed}</p>
+                </div>
+                <CheckCircle className="w-8 h-8 text-gray-600" />
               </div>
             </div>
             
@@ -401,7 +416,7 @@ export default function AdminHelpDeskPage() {
               />
             </div>
             
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}

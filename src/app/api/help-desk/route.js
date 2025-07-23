@@ -1,5 +1,6 @@
 import { adminDb } from '../../../config/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { sendNewTicketNotificationToAdmins } from '../../../utils/emailService';
 
 // Function to generate next ticket number using Admin SDK
 async function generateTicketNumber() {
@@ -81,6 +82,20 @@ export async function POST(req) {
     });
     
     console.log('Ticket created successfully:', ticketId);
+
+    // Send email notification to admins (async, don't wait for it to complete)
+    sendNewTicketNotificationToAdmins({
+      ticketNumber,
+      title: newTicket.title,
+      description: newTicket.description,
+      userName: newTicket.userName,
+      userEmail: newTicket.userEmail,
+      priority: newTicket.priority,
+      category: newTicket.category
+    }).catch(error => {
+      console.error('Failed to send email notification to admins:', error);
+      // Don't fail the ticket creation if email fails
+    });
 
     return new Response(JSON.stringify({ 
       message: 'Ticket created successfully',

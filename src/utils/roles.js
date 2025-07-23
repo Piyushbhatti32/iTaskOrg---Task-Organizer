@@ -8,7 +8,7 @@ const ADMIN_USERS = [
 ];
 
 // Temporary: Allow admin access for anyone during development
-const ALLOW_ALL_ADMINS = false;
+const ALLOW_ALL_ADMINS = true;
 
 // Check if a user is an admin
 export const isAdmin = (user) => {
@@ -31,4 +31,9 @@ export const hasAdminAccess = (user) => {
 export const getUserRole = (user) => {
   if (isAdmin(user)) return 'admin';
   return 'user';
+};
+
+// Get admin email addresses
+export const getAdminEmails = () => {
+  return ADMIN_USERS;
 };

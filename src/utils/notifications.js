@@ -200,6 +200,26 @@ export async function sendCustomNotification(recipientId, type, title, message, 
 }
 
 /**
+ * Placeholder function to simulate sending an email notification.
+ * You should integrate with an actual email service in production.
+ * @param {string} recipientEmail - Recipient's email
+ * @param {string} subject - Email subject
+ * @param {string} message - Email message
+ */
+export async function sendEmailNotification(recipientEmail, subject, message) {
+  try {
+    console.log(`Sending email to: ${recipientEmail}`);
+    console.log(`Subject: ${subject}`);
+    console.log(`Message: ${message}`);
+    // Simulate async operation
+    return new Promise((resolve) => setTimeout(resolve, 1000));
+  } catch (error) {
+    console.error('Error sending email notification:', error);
+    throw error;
+  }
+}
+
+/**
  * Send bulk notifications to multiple users
  * @param {Array} recipients - Array of user IDs
  * @param {string} type - The type of notification

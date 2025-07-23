@@ -9,11 +9,23 @@ import { auth } from '../../config/firebase';
 /**
  * TaskDebugger Component - Only for development debugging
  * Shows current task state, user info, and provides debugging tools
+ * 
+ * Global Controls:
+ * - Ctrl+Shift+D (or Cmd+Shift+D on Mac): Toggle visibility
+ * - Visibility preference is persisted in localStorage
  */
 const TaskDebugger = ({ enabled = process.env.NODE_ENV === 'development' }) => {
   // Always call hooks first - React rules requirement
   const tasks = useTasks();
   const [expanded, setExpanded] = useState(false);
+  const [visible, setVisible] = useState(() => {
+    // Load visibility preference from localStorage
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('taskDebugger_visible');
+      return saved !== null ? JSON.parse(saved) : true; // Default to visible
+    }
+    return true;
+  });
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [user, setUser] = useState(null);
 
@@ -24,6 +36,52 @@ const TaskDebugger = ({ enabled = process.env.NODE_ENV === 'development' }) => {
 
     return () => unsubscribe();
   }, []);
+
+  // Define toggleVisibility function before it's used in useEffect
+  const toggleVisibility = () => {
+    setVisible(!visible);
+  };
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Debug logging for troubleshooting (can be removed later)
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey) {
+        console.log('🔑 TaskDebugger: Potential shortcut detected:', {
+          key: event.key,
+          code: event.code,
+          ctrlKey: event.ctrlKey,
+          metaKey: event.metaKey,
+          shiftKey: event.shiftKey,
+          keyLowercase: event.key.toLowerCase()
+        });
+      }
+      
+      // Ctrl+Shift+D (or Cmd+Shift+D on Mac): Toggle visibility
+      // Use case-insensitive comparison and check both key and code
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && 
+          (event.key.toLowerCase() === 'd' || event.code === 'KeyD')) {
+        event.preventDefault();
+        console.log('🐛 TaskDebugger: Keyboard shortcut triggered, toggling visibility');
+        toggleVisibility();
+      }
+    };
+
+    console.log('🔑 TaskDebugger: Keyboard shortcut listener registered (Ctrl+Shift+D)');
+    window.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      console.log('🔑 TaskDebugger: Keyboard shortcut listener removed');
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [toggleVisibility]);
+
+  // Save visibility preference to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('taskDebugger_visible', JSON.stringify(visible));
+    }
+  }, [visible]);
 
   useEffect(() => {
     let interval;
@@ -41,6 +99,10 @@ const TaskDebugger = ({ enabled = process.env.NODE_ENV === 'development' }) => {
   }
 
   if (!enabled) return null;
+
+  // Don't render if not visible
+  if (!visible) return null;
+
 
   const handleLogState = () => {
     debugTaskState.logTaskState(tasks, 'Manual Log');
@@ -370,7 +432,34 @@ const TaskDebugger = ({ enabled = process.env.NODE_ENV === 'development' }) => {
       margin: '2px',
       borderRadius: '4px',
       cursor: 'pointer',
-      fontSize: '10px'
+      fontSize: '10px',
+      transition: 'all 0.2s ease'
+    },
+    toggleButton: {
+      backgroundColor: '#333',
+      color: '#0f0',
+      border: '1px solid #0f0',
+      padding: '6px 10px',
+      borderRadius: '4px',
+      cursor: 'pointer',
+      fontSize: '12px',
+      fontWeight: 'bold',
+      transition: 'all 0.2s ease',
+      minWidth: '30px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    },
+    hideButton: {
+      backgroundColor: '#333',
+      color: '#ff6b6b',
+      border: '1px solid #ff6b6b',
+      padding: '4px 8px',
+      borderRadius: '4px',
+      cursor: 'pointer',
+      fontSize: '10px',
+      fontWeight: 'bold',
+      transition: 'all 0.2s ease'
     },
     info: {
       marginBottom: '8px'
@@ -385,16 +474,52 @@ const TaskDebugger = ({ enabled = process.env.NODE_ENV === 'development' }) => {
     }
   };
 
+  // Floating toggle button when debugger is hidden
+  if (!visible) {
+    return (
+      <div style={{
+        position: 'fixed',
+        bottom: '20px',
+        right: '20px',
+        zIndex: 9999
+      }}>
+        <button 
+          style={{
+            ...styles.toggleButton,
+            backgroundColor: '#1a1a1a',
+            color: '#0f0',
+            border: '2px solid #0f0',
+            boxShadow: '0 2px 10px rgba(0, 255, 0, 0.3)'
+          }}
+          onClick={toggleVisibility}
+          title="Show Task Debugger (Ctrl+Shift+D)"
+        >
+          🐛
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.debugger}>
       <div style={styles.header}>
         <strong>🐛 Task Debugger</strong>
-        <button 
-          style={styles.button} 
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? '▼' : '▶'}
-        </button>
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <button 
+            style={styles.hideButton} 
+            onClick={toggleVisibility}
+            title="Hide Debugger (Ctrl+Shift+D)"
+          >
+            ✕
+          </button>
+          <button 
+            style={styles.toggleButton} 
+            onClick={() => setExpanded(!expanded)}
+            title={expanded ? 'Collapse Panel' : 'Expand Panel'}
+          >
+            {expanded ? '▼' : '▶'}
+          </button>
+        </div>
       </div>
 
       {expanded && (

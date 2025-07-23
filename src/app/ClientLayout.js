@@ -11,6 +11,7 @@ import { useProfile } from '../store';
 import { LogOut, User, Menu, X, Shield } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 import { isAdmin } from '../utils/roles';
+import NotificationCenter from '../components/notifications/NotificationCenter';
 
 const navLinks = [
   { href: '/tasks', label: 'Tasks', icon: '📝' },
@@ -245,7 +246,7 @@ function MobileNavOverlay({ isOpen, onClose, user }) {
       />
       
       {/* Navigation Panel */}
-      <nav className={`lg:hidden fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] ${isDark ? 'bg-gray-950 border-gray-800' : 'bg-white border-gray-200'} border-r shadow-2xl z-50 transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <nav className={`lg:hidden fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] ${isDark ? 'bg-gray-950 border-gray-800' : 'bg-white border-gray-200'} border-r shadow-2xl z-50 transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col`}>
         {/* Header */}
         <div className={`flex items-center justify-between p-4 border-b ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
           <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">iTaskOrg</h1>
@@ -295,8 +296,12 @@ function MobileNavOverlay({ isOpen, onClose, user }) {
         </Link>
         
         {/* Navigation Links */}
-        <div className="flex-1 overflow-y-auto" onClick={handleLinkClick}>
-          <NavigationLinks pathname={pathname} user={user} />
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div onClick={handleLinkClick}>
+            <NavigationLinks pathname={pathname} user={user} />
+          </div>
+          {/* Extra padding at bottom to ensure full scrollability */}
+          <div className="h-4"></div>
         </div>
         
         {/* Logout Button */}
