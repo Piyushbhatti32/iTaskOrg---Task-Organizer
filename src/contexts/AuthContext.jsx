@@ -96,7 +96,7 @@ export function AuthProvider({ children }) {
 
       console.log('Setting auth cookie for user:', user.email);
       const token = await user.getIdToken(true); // Force token refresh
-      const maxAge = remember ? 7 * 24 * 60 * 60 : 3600; // 7 days if remember, 1 hour if not
+      const maxAge = remember ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // 30 days if remember, 24 hours if not
       
       // Check if this is an admin/support account
       const adminEmails = ['itaskorg+admin@gmail.com', 'itaskorg+support@gmail.com'];
@@ -226,8 +226,8 @@ export function AuthProvider({ children }) {
     
     try {
       console.log('Attempting login for:', email);
-      // Set persistence based on remember me
-      await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
+      // Set persistence based on remember me - default to local persistence for better UX
+      await setPersistence(auth, remember ? browserLocalPersistence : browserLocalPersistence);
       
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       console.log('Login successful for:', email);

@@ -224,15 +224,24 @@ export async function sendTicketStatusUpdateToUser(userEmail, ticketData) {
 async function sendEmail(to, subject, htmlBody) {
   const sendGridApiKey = process.env.SENDGRID_API_KEY;
   const fromEmail = process.env.FROM_EMAIL || 'noreply@itaskorg.com';
+  const isProduction = process.env.NODE_ENV === 'production';
   
   // Check if SendGrid is configured
   if (!sendGridApiKey) {
-    console.log('⚠️ SendGrid API key not found. Falling back to console logging.');
-    console.log('📧 EMAIL NOTIFICATION (SIMULATED):');
-    console.log('To:', to);
-    console.log('Subject:', subject);
-    console.log('Body Preview:', htmlBody.substring(0, 200) + '...');
-    return true;
+    console.log('⚠️ SendGrid API key not found.');
+    
+    if (isProduction) {
+      console.error('❌ PRODUCTION ERROR: SendGrid API key is required in production!');
+      console.error('📧 Failed to send email to:', to);
+      console.error('📧 Subject:', subject);
+      return false;
+    } else {
+      console.log('📧 EMAIL NOTIFICATION (DEVELOPMENT - SIMULATED):');
+      console.log('To:', to);
+      console.log('Subject:', subject);
+      console.log('Body Preview:', htmlBody.substring(0, 200) + '...');
+      return true;
+    }
   }
   
   try {

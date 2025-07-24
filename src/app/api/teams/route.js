@@ -1,18 +1,7 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/config/firebase';
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  addDoc, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query,
-  where,
-  serverTimestamp
-} from 'firebase/firestore';
+import { adminDb } from '@/config/firebase-admin';
+import { getAuthenticatedUser } from '@/lib/auth';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // Helper function to validate team data
 function validateTeamData(data) {
@@ -31,20 +20,21 @@ function validateTeamData(data) {
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    const user = await getAuthenticatedUser(request);
+    const userId = user?.uid;
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    const teamsRef = collection(db, 'teams');
+    const teamsRef = adminDb.collection('teams');
     // Query for teams where user is either a member or leader
-    const memberQuery = query(teamsRef, where(`members.${userId}`, '!=', null));
-    const leaderQuery = query(teamsRef, where('leaderId', '==', userId));
+    const memberQuery = teamsRef.where(`members.${userId}`, '!=', null);
+    const leaderQuery = teamsRef.where('leaderId', '==', userId);
     
     const [memberSnapshot, leaderSnapshot] = await Promise.all([
-      getDocs(memberQuery),
-      getDocs(leaderQuery)
+      memberQuery.get(),
+      leaderQuery.get()
     ]);
     
     const teamIds = new Set();
@@ -83,7 +73,9 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const data = await request.json();
-    const { name, description, leaderId } = data;
+    const user = await getAuthenticatedUser(request);
+    const leaderId = user?.uid;
+    const { name, description } = data;
 
     if (!leaderId) {
       return NextResponse.json({ error: 'Leader ID is required' }, { status: 400 });
@@ -102,15 +94,15 @@ export async function POST(request) {
       members: {
         [leaderId]: {
           role: 'leader',
-          joinedAt: serverTimestamp()
+          joinedAt: FieldValue.serverTimestamp()
         }
       },
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
     };
 
-    const teamsRef = collection(db, 'teams');
-    const docRef = await addDoc(teamsRef, teamData);
+    const teamsRef = adminDb.collection('teams');
+    const docRef = await teamsRef.add(teamData);
 
     return NextResponse.json({
       id: docRef.id,
@@ -127,6 +119,7 @@ export async function PATCH(request) {
   try {
     const data = await request.json();
     const { id, name, description } = data;
+    const user = await getAuthenticatedUser(request);
 
     if (!id) {
       return NextResponse.json({ error: 'Team ID is required' }, { status: 400 });
@@ -137,20 +130,20 @@ export async function PATCH(request) {
       return NextResponse.json({ errors }, { status: 400 });
     }
 
-    const teamRef = doc(db, 'teams', id);
-    const teamDoc = await getDoc(teamRef);
+    const teamRef = adminDb.collection('teams').doc(id);
+    const teamDoc = await teamRef.get();
 
-    if (!teamDoc.exists()) {
+    if (!teamDoc.exists) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
     const updateData = {
       name,
       description,
-      updatedAt: serverTimestamp()
+      updatedAt: FieldValue.serverTimestamp()
     };
 
-    await updateDoc(teamRef, updateData);
+    await teamRef.update(updateData);
 
     return NextResponse.json({
       id,
@@ -167,7 +160,8 @@ export async function DELETE(request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    const leaderId = searchParams.get('leaderId');
+    const user = await getAuthenticatedUser(request);
+    const leaderId = user?.uid;
 
     if (!id) {
       return NextResponse.json({ error: 'Team ID is required' }, { status: 400 });
@@ -177,10 +171,10 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'Leader ID is required' }, { status: 400 });
     }
 
-    const teamRef = doc(db, 'teams', id);
-    const teamDoc = await getDoc(teamRef);
+    const teamRef = adminDb.collection('teams').doc(id);
+    const teamDoc = await teamRef.get();
 
-    if (!teamDoc.exists()) {
+    if (!teamDoc.exists) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
@@ -190,7 +184,7 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'Only team leader can delete the team' }, { status: 403 });
     }
 
-    await deleteDoc(teamRef);
+    await teamRef.delete();
 
     return NextResponse.json({
       message: 'Team deleted successfully',

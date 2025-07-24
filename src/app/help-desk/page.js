@@ -12,7 +12,8 @@ import {
   Clock, 
   MessageSquare,
   X,
-  Send
+  Send,
+  Edit
 } from 'lucide-react';
 import { isValidDate, safeFormatDateTime } from '../../utils/dateUtils';
 
@@ -28,6 +29,9 @@ export default function HelpDeskPage() {
   const [creating, setCreating] = useState(false);
   const [createdTicketNumber, setCreatedTicketNumber] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [editingTicket, setEditingTicket] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   // Form state
   const [newTicket, setNewTicket] = useState({
@@ -149,6 +153,40 @@ export default function HelpDeskPage() {
       fetchTickets();
     } catch (error) {
       console.error('Error updating ticket:', error);
+    }
+  };
+
+  const updateTicket = async () => {
+    if (!editingTicket.title.trim() || !editingTicket.description.trim()) return;
+
+    setUpdating(true);
+    try {
+      const response = await fetch(`/api/help-desk/${editingTicket.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editingTicket.title,
+          description: editingTicket.description,
+          priority: editingTicket.priority,
+          category: editingTicket.category
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setShowEditModal(false);
+        setEditingTicket(null);
+        fetchTickets();
+      } else {
+        console.error('Error updating ticket:', result.error || 'Unknown error');
+        alert('Error updating ticket: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error updating ticket:', error);
+      alert('Error updating ticket. Please try again.');
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -314,34 +352,51 @@ export default function HelpDeskPage() {
                     )}
                   </div>
 
-                  {ticket.status !== 'closed' && (
-                    <div className="flex gap-2">
-                      {ticket.status === 'open' && (
-                        <button
-                          onClick={() => updateTicketStatus(ticket.id, 'in-progress')}
-                          className="flex-1 bg-yellow-100 text-yellow-800 px-3 py-2 rounded-lg text-xs font-medium hover:bg-yellow-200 transition-colors"
-                        >
-                          Mark In Progress
-                        </button>
-                      )}
-                      {(ticket.status === 'open' || ticket.status === 'in-progress') && (
-                        <button
-                          onClick={() => updateTicketStatus(ticket.id, 'resolved')}
-                          className="flex-1 bg-green-100 text-green-800 px-3 py-2 rounded-lg text-xs font-medium hover:bg-green-200 transition-colors"
-                        >
-                          Mark Resolved
-                        </button>
-                      )}
-                      {ticket.status === 'resolved' && (
-                        <button
-                          onClick={() => updateTicketStatus(ticket.id, 'closed')}
-                          className="flex-1 bg-gray-100 text-gray-800 px-3 py-2 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors"
-                        >
-                          Close Ticket
-                        </button>
-                      )}
-                    </div>
-                  )}
+                  <div className="space-y-2">
+                    {/* Status buttons */}
+                    {ticket.status !== 'closed' && (
+                      <div className="flex gap-2">
+                        {ticket.status === 'open' && (
+                          <button
+                            onClick={() => updateTicketStatus(ticket.id, 'in-progress')}
+                            className="flex-1 bg-yellow-100 text-yellow-800 px-3 py-2 rounded-lg text-xs font-medium hover:bg-yellow-200 transition-colors"
+                          >
+                            Mark In Progress
+                          </button>
+                        )}
+                        {(ticket.status === 'open' || ticket.status === 'in-progress') && (
+                          <button
+                            onClick={() => updateTicketStatus(ticket.id, 'resolved')}
+                            className="flex-1 bg-green-100 text-green-800 px-3 py-2 rounded-lg text-xs font-medium hover:bg-green-200 transition-colors"
+                          >
+                            Mark Resolved
+                          </button>
+                        )}
+                        {ticket.status === 'resolved' && (
+                          <button
+                            onClick={() => updateTicketStatus(ticket.id, 'closed')}
+                            className="flex-1 bg-gray-100 text-gray-800 px-3 py-2 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors"
+                          >
+                            Close Ticket
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Edit button - always available for open tickets */}
+                    {(ticket.status === 'open' || ticket.status === 'in-progress') && (
+                      <button
+                        onClick={() => {
+                          setEditingTicket(ticket);
+                          setShowEditModal(true);
+                        }}
+                        className={`w-full ${isDark ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1`}
+                      >
+                        <Edit className="w-3 h-3" />
+                        Edit Ticket
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -501,6 +556,141 @@ export default function HelpDeskPage() {
                       <>
                         <Send className="w-4 h-4" />
                         Create Ticket
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Ticket Modal */}
+        {showEditModal && editingTicket && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className={`${isDark ? 'bg-gray-900' : 'bg-white'} rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto`}>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className={`text-2xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                  Edit Ticket
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingTicket(null);
+                  }}
+                  className={`p-2 rounded-xl ${isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'} transition-colors`}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                    Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={editingTicket.title}
+                    onChange={(e) => setEditingTicket({ ...editingTicket, title: e.target.value })}
+                    className={`w-full px-4 py-3 rounded-xl border ${
+                      isDark 
+                        ? 'bg-gray-800 border-gray-700 text-gray-100' 
+                        : 'bg-white border-gray-300 text-gray-900'
+                    } focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                    placeholder="Brief description of the issue"
+                  />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                      Category
+                    </label>
+                    <select
+                      value={editingTicket.category}
+                      onChange={(e) => setEditingTicket({ ...editingTicket, category: e.target.value })}
+                      className={`w-full px-4 py-3 rounded-xl border ${
+                        isDark 
+                          ? 'bg-gray-800 border-gray-700 text-gray-100' 
+                          : 'bg-white border-gray-300 text-gray-900'
+                      } focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                    >
+                      {categories.map(category => (
+                        <option key={category.value} value={category.value}>
+                          {category.icon} {category.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                      Priority
+                    </label>
+                    <select
+                      value={editingTicket.priority}
+                      onChange={(e) => setEditingTicket({ ...editingTicket, priority: e.target.value })}
+                      className={`w-full px-4 py-3 rounded-xl border ${
+                        isDark 
+                          ? 'bg-gray-800 border-gray-700 text-gray-100' 
+                          : 'bg-white border-gray-300 text-gray-900'
+                      } focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                    >
+                      {priorities.map(priority => (
+                        <option key={priority.value} value={priority.value}>
+                          {priority.icon} {priority.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                    Description *
+                  </label>
+                  <textarea
+                    value={editingTicket.description}
+                    onChange={(e) => setEditingTicket({ ...editingTicket, description: e.target.value })}
+                    rows={6}
+                    className={`w-full px-4 py-3 rounded-xl border ${
+                      isDark 
+                        ? 'bg-gray-800 border-gray-700 text-gray-100' 
+                        : 'bg-white border-gray-300 text-gray-900'
+                    } focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none`}
+                    placeholder="Please provide detailed information about the issue, including steps to reproduce if it's a bug..."
+                  />
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setEditingTicket(null);
+                    }}
+                    className={`flex-1 px-6 py-3 rounded-xl font-medium transition-colors ${
+                      isDark 
+                        ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={updateTicket}
+                    disabled={updating || !editingTicket.title.trim() || !editingTicket.description.trim()}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {updating ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <Edit className="w-4 h-4" />
+                        Update Ticket
                       </>
                     )}
                   </button>

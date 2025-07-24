@@ -1,12 +1,7 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/config/firebase';
-import { 
-  collection,
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp
-} from 'firebase/firestore';
+import { adminDb } from '@/config/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 // Helper function to validate task data
 function validateTaskData(data) {
@@ -33,20 +28,28 @@ function validateTaskData(data) {
 // POST /api/teams/tasks/assign - Assign a task to a team member
 export async function POST(request) {
   try {
+    // Authenticate user first
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const data = await request.json();
     const { 
       teamId, 
-      memberId, 
-      leaderId,
+      memberId,
       title,
       description,
       deadline,
       priority = 'medium'
     } = data;
 
-    if (!teamId || !memberId || !leaderId) {
+    if (!teamId || !memberId) {
       return NextResponse.json({ 
-        error: 'Team ID, member ID, and leader ID are required' 
+        error: 'Team ID and member ID are required' 
       }, { status: 400 });
     }
 
@@ -55,52 +58,51 @@ export async function POST(request) {
       return NextResponse.json({ errors }, { status: 400 });
     }
 
-    // Verify team exists and requester is leader
-    const teamRef = doc(db, 'teams', teamId);
-    const teamDoc = await getDoc(teamRef);
+    // Verify team exists and authenticated user is leader
+    const teamDoc = await adminDb.collection('teams').doc(teamId).get();
 
-    if (!teamDoc.exists()) {
+    if (!teamDoc.exists) {
       return NextResponse.json({ 
         error: 'Team not found' 
       }, { status: 404 });
     }
 
     const teamData = teamDoc.data();
-    if (teamData.leaderId !== leaderId) {
+    if (teamData.leaderId !== user.uid) {
       return NextResponse.json({ 
         error: 'Only team leader can assign tasks' 
       }, { status: 403 });
     }
 
     // Verify member exists in team
-    const memberRef = doc(db, 'teams', teamId, 'members', memberId);
-    const memberDoc = await getDoc(memberRef);
+    const memberDoc = await adminDb.collection('teams').doc(teamId)
+      .collection('members').doc(memberId).get();
 
-    if (!memberDoc.exists()) {
+    if (!memberDoc.exists) {
       return NextResponse.json({ 
         error: 'Member not found in team' 
       }, { status: 404 });
     }
 
     // Create task in team's tasks subcollection
-    const taskRef = doc(collection(db, 'teams', teamId, 'tasks'));
+    const taskRef = adminDb.collection('teams').doc(teamId).collection('tasks').doc();
     const taskData = {
       title,
       description: description || '',
       deadline,
       priority,
       assignedTo: memberId,
-      assignedBy: leaderId,
+      assignedBy: user.uid,
       status: 'pending', // pending, accepted, rejected, completed
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
     };
 
-    await setDoc(taskRef, taskData);
+    await taskRef.set(taskData);
 
     // Create notification for the assigned member
-    const notificationRef = doc(collection(db, 'notifications'));
-    await setDoc(notificationRef, {
+    const notificationRef = adminDb.collection('notifications').doc();
+    await notificationRef.set({
       userId: memberId,
       type: 'task_assigned',
       teamId,
@@ -108,7 +110,7 @@ export async function POST(request) {
       taskId: taskRef.id,
       taskTitle: title,
       status: 'unread',
-      createdAt: serverTimestamp()
+      createdAt: FieldValue.serverTimestamp()
     });
 
     return NextResponse.json({
@@ -122,4 +124,4 @@ export async function POST(request) {
       error: 'Failed to assign task' 
     }, { status: 500 });
   }
-} 
+}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/config/firebase';
-import { createGroup, getGroup, updateGroup, deleteGroup } from '@/utils/db';
+import { adminDb } from '@/config/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 /**
  * Create a new group
@@ -9,29 +10,26 @@ import { createGroup, getGroup, updateGroup, deleteGroup } from '@/utils/db';
 export async function POST(request) {
   try {
     const { name, description, members = [] } = await request.json();
-    const authHeader = request.headers.get('Authorization');
     
-    if (!authHeader?.startsWith('Bearer ')) {
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await auth.verifyIdToken(token);
     
-    if (!decodedToken.email_verified) {
+    if (!user.email_verified) {
       return NextResponse.json(
         { error: 'Email verification required' },
         { status: 403 }
       );
     }
 
-    const userId = decodedToken.uid;
+    const userId = user.uid;
     
     // Create group with creator as admin
     const groupMembers = {
       [userId]: {
         role: 'admin',
-        joinedAt: new Date().toISOString()
+        joinedAt: FieldValue.serverTimestamp()
       }
     };
     
@@ -44,7 +42,7 @@ export async function POST(request) {
           email: member.email,
           name: member.name,
           role: member.role || 'member',
-          joinedAt: new Date().toISOString(),
+          joinedAt: FieldValue.serverTimestamp(),
           invitedBy: userId
         };
       }
@@ -58,14 +56,19 @@ export async function POST(request) {
       settings: {
         isPrivate: false,
         allowMemberInvites: true
-      }
+      },
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
     };
 
-    const groupRef = await createGroup(groupData);
+    const groupRef = adminDb.collection('groups').doc();
+    await groupRef.set(groupData);
 
     return NextResponse.json({
       id: groupRef.id,
-      ...groupData
+      ...groupData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     });
   } catch (error) {
     console.error('Error creating group:', error);
@@ -84,21 +87,21 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const groupId = searchParams.get('id');
-    const authHeader = request.headers.get('Authorization');
     
-    if (!authHeader?.startsWith('Bearer ')) {
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await auth.verifyIdToken(token);
-    const userId = decodedToken.uid;
+    const userId = user.uid;
 
-    const group = await getGroup(groupId);
+    const groupDoc = await adminDb.collection('groups').doc(groupId).get();
     
-    if (!group) {
+    if (!groupDoc.exists) {
       return NextResponse.json({ error: 'Group not found' }, { status: 404 });
     }
+    
+    const group = { id: groupDoc.id, ...groupDoc.data() };
 
     // Check if user is a member
     if (!group.members[userId]) {
@@ -127,21 +130,21 @@ export async function PATCH(request) {
     const { searchParams } = new URL(request.url);
     const groupId = searchParams.get('id');
     const { name, description, settings } = await request.json();
-    const authHeader = request.headers.get('Authorization');
     
-    if (!authHeader?.startsWith('Bearer ')) {
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await auth.verifyIdToken(token);
-    const userId = decodedToken.uid;
+    const userId = user.uid;
 
-    const group = await getGroup(groupId);
+    const groupDoc = await adminDb.collection('groups').doc(groupId).get();
     
-    if (!group) {
+    if (!groupDoc.exists) {
       return NextResponse.json({ error: 'Group not found' }, { status: 404 });
     }
+    
+    const group = { id: groupDoc.id, ...groupDoc.data() };
 
     // Check if user is an admin
     if (!group.members[userId] || group.members[userId].role !== 'admin') {
@@ -154,14 +157,16 @@ export async function PATCH(request) {
     const updateData = {
       ...(name && { name }),
       ...(description && { description }),
-      ...(settings && { settings })
+      ...(settings && { settings }),
+      updatedAt: FieldValue.serverTimestamp()
     };
 
-    await updateGroup(groupId, updateData);
+    await adminDb.collection('groups').doc(groupId).update(updateData);
 
     return NextResponse.json({
       id: groupId,
-      ...updateData
+      ...updateData,
+      updatedAt: new Date().toISOString()
     });
   } catch (error) {
     console.error('Error updating group:', error);
@@ -180,21 +185,21 @@ export async function DELETE(request) {
   try {
     const { searchParams } = new URL(request.url);
     const groupId = searchParams.get('id');
-    const authHeader = request.headers.get('Authorization');
     
-    if (!authHeader?.startsWith('Bearer ')) {
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await auth.verifyIdToken(token);
-    const userId = decodedToken.uid;
+    const userId = user.uid;
 
-    const group = await getGroup(groupId);
+    const groupDoc = await adminDb.collection('groups').doc(groupId).get();
     
-    if (!group) {
+    if (!groupDoc.exists) {
       return NextResponse.json({ error: 'Group not found' }, { status: 404 });
     }
+    
+    const group = { id: groupDoc.id, ...groupDoc.data() };
 
     // Check if user is an admin
     if (!group.members[userId] || group.members[userId].role !== 'admin') {
@@ -204,7 +209,7 @@ export async function DELETE(request) {
       );
     }
 
-    await deleteGroup(groupId);
+    await adminDb.collection('groups').doc(groupId).delete();
 
     return NextResponse.json({ success: true });
   } catch (error) {

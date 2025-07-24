@@ -1,15 +1,6 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/config/firebase';
-import { 
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  setDoc,
-  serverTimestamp
-} from 'firebase/firestore';
+import { adminDb, FieldValue } from '@/config/firebase-admin';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 // Helper function to validate email
 function isValidEmail(email) {
@@ -20,12 +11,25 @@ function isValidEmail(email) {
 // POST /api/teams/invite - Invite a user to a team
 export async function POST(request) {
   try {
-    const data = await request.json();
-    const { teamId, email, leaderId } = data;
+    // Authenticate user
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!teamId || !email || !leaderId) {
+    // Check if user is verified
+    if (!user.email_verified) {
       return NextResponse.json({ 
-        error: 'Team ID, email, and leader ID are required' 
+        error: 'Email verification required' 
+      }, { status: 403 });
+    }
+
+    const data = await request.json();
+    const { teamId, email } = data;
+
+    if (!teamId || !email) {
+      return NextResponse.json({ 
+        error: 'Team ID and email are required' 
       }, { status: 400 });
     }
 
@@ -36,26 +40,25 @@ export async function POST(request) {
     }
 
     // Verify team exists and requester is leader
-    const teamRef = doc(db, 'teams', teamId);
-    const teamDoc = await getDoc(teamRef);
+    const teamDoc = await adminDb.collection('teams').doc(teamId).get();
 
-    if (!teamDoc.exists()) {
+    if (!teamDoc.exists) {
       return NextResponse.json({ 
         error: 'Team not found' 
       }, { status: 404 });
     }
 
     const teamData = teamDoc.data();
-    if (teamData.leaderId !== leaderId) {
+    if (teamData.leaderId !== user.uid) {
       return NextResponse.json({ 
         error: 'Only team leader can invite members' 
       }, { status: 403 });
     }
 
     // Check if user with email exists
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('email', '==', email));
-    const userSnapshot = await getDocs(q);
+    const userSnapshot = await adminDb.collection('users')
+      .where('email', '==', email)
+      .get();
 
     if (userSnapshot.empty) {
       return NextResponse.json({ 
@@ -63,36 +66,43 @@ export async function POST(request) {
       }, { status: 404 });
     }
 
-    const userData = userSnapshot.docs[0].data();
-    const userId = userSnapshot.docs[0].id;
+    const userDoc = userSnapshot.docs[0];
+    const userData = userDoc.data();
+    const userId = userDoc.id;
 
     // Check if user is already a member
-    const memberRef = doc(db, 'teams', teamId, 'members', userId);
-    const memberDoc = await getDoc(memberRef);
+    const memberDoc = await adminDb.collection('teams')
+      .doc(teamId)
+      .collection('members')
+      .doc(userId)
+      .get();
 
-    if (memberDoc.exists()) {
+    if (memberDoc.exists) {
       return NextResponse.json({ 
         error: 'User is already a team member' 
       }, { status: 400 });
     }
 
     // Add user as team member
-    await setDoc(memberRef, {
-      email: userData.email,
-      name: userData.name || '',
-      role: 'member',
-      joinedAt: serverTimestamp()
-    });
+    await adminDb.collection('teams')
+      .doc(teamId)
+      .collection('members')
+      .doc(userId)
+      .set({
+        email: userData.email,
+        name: userData.name || '',
+        role: 'member',
+        joinedAt: FieldValue.serverTimestamp()
+      });
 
     // Create notification for the invited user
-    const notificationRef = doc(collection(db, 'notifications'));
-    await setDoc(notificationRef, {
+    await adminDb.collection('notifications').add({
       userId,
       type: 'team_invite',
       teamId,
       teamName: teamData.name,
       status: 'unread',
-      createdAt: serverTimestamp()
+      createdAt: FieldValue.serverTimestamp()
     });
 
     return NextResponse.json({
@@ -105,4 +115,4 @@ export async function POST(request) {
       error: 'Failed to send team invitation' 
     }, { status: 500 });
   }
-} 
+}

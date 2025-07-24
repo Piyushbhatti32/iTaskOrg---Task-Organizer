@@ -11,8 +11,12 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute = publicRoutes.some(route => path.startsWith(route))
 
   // Array of routes that require authentication
-  const protectedRoutes = ['/tasks', '/calendar', '/stats', '/profile', '/settings', '/focus', '/templates', '/groups', '/team', '/completed']
+  const protectedRoutes = ['/tasks', '/calendar', '/stats', '/profile', '/settings', '/focus', '/templates', '/groups', '/team', '/completed', '/help-desk']
   const isProtectedRoute = protectedRoutes.some(route => path.startsWith(route))
+  
+  // Array of admin-only routes
+  const adminRoutes = ['/admin']
+  const isAdminRoute = adminRoutes.some(route => path.startsWith(route))
 
   // Get the token and email verification status from cookies
   const token = request.cookies.get('auth-token')
@@ -26,7 +30,7 @@ export async function middleware(request: NextRequest) {
   const hasValidToken = token?.value && token.value.length > 0
   
   // Bypass verification for admin/support accounts
-  const adminEmails = ['itaskorg+admin@gmail.com', 'itaskorg+support@gmail.com']
+  const adminEmails = ['itaskorg@gmail.com', 'itaskorg+admin@gmail.com', 'itaskorg+support@gmail.com', 'piyushbhatti32@gmail.com']
   const isAdminAccount = userEmail?.value && adminEmails.includes(userEmail.value.toLowerCase())
   
   const isEmailVerified = emailVerified?.value === 'true' || isAdminAccount
@@ -61,6 +65,12 @@ export async function middleware(request: NextRequest) {
       !['/verify-email', '/terms', '/privacy'].some(route => path.startsWith(route))) {
     console.log('Middleware - Redirecting to tasks, user is authenticated');
     return NextResponse.redirect(new URL('/tasks', request.url))
+  }
+
+  // If it's an admin route and user is not admin, redirect to help desk
+  if (isAdminRoute && hasValidToken && !isAdminAccount) {
+    console.log('Middleware - Redirecting non-admin user from admin route to help desk');
+    return NextResponse.redirect(new URL('/help-desk', request.url))
   }
 
   // Handle root path redirect
@@ -100,6 +110,8 @@ export const config = {
     '/templates/:path*',
     '/groups/:path*',
     '/team/:path*',
-    '/completed/:path*'
+    '/completed/:path*',
+    '/help-desk/:path*',
+    '/admin/:path*'
   ],
 }

@@ -8,14 +8,17 @@ const ADMIN_USERS = [
 ];
 
 // Temporary: Allow admin access for anyone during development
-const ALLOW_ALL_ADMINS = true;
+// WARNING: Set to false in production!
+const ALLOW_ALL_ADMINS = false;
 
 // Check if a user is an admin
 export const isAdmin = (user) => {
   if (!user || !user.email) return false;
   
   // During development, allow all logged-in users to be admins
+  // WARNING: This should be false in production!
   if (ALLOW_ALL_ADMINS) {
+    console.warn('⚠️ ALLOW_ALL_ADMINS is enabled - this should be disabled in production!');
     return true;
   }
   

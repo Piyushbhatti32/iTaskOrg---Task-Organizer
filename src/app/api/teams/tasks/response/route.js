@@ -1,30 +1,31 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/config/firebase';
-import { 
-  doc,
-  getDoc,
-  updateDoc,
-  setDoc,
-  collection,
-  serverTimestamp
-} from 'firebase/firestore';
+import { adminDb, FieldValue } from '@/lib/firebase-admin';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 // POST /api/teams/tasks/response - Accept or reject a task
 export async function POST(request) {
   try {
+    // Authenticate the user
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const data = await request.json();
     const { 
       teamId, 
       taskId, 
-      memberId,
       response, // 'accept' or 'reject'
       reason, // Required if rejecting
       suggestedReassignment // Optional member ID for reassignment
     } = data;
 
-    if (!teamId || !taskId || !memberId || !response) {
+    // Use authenticated user's UID as memberId
+    const memberId = user.uid;
+
+    if (!teamId || !taskId || !response) {
       return NextResponse.json({ 
-        error: 'Team ID, task ID, member ID, and response are required' 
+        error: 'Team ID, task ID, and response are required' 
       }, { status: 400 });
     }
 
@@ -41,10 +42,9 @@ export async function POST(request) {
     }
 
     // Verify team exists
-    const teamRef = doc(db, 'teams', teamId);
-    const teamDoc = await getDoc(teamRef);
+    const teamDoc = await adminDb.collection('teams').doc(teamId).get();
 
-    if (!teamDoc.exists()) {
+    if (!teamDoc.exists) {
       return NextResponse.json({ 
         error: 'Team not found' 
       }, { status: 404 });
@@ -53,10 +53,10 @@ export async function POST(request) {
     const teamData = teamDoc.data();
 
     // Verify task exists and is assigned to the member
-    const taskRef = doc(db, 'teams', teamId, 'tasks', taskId);
-    const taskDoc = await getDoc(taskRef);
+    const taskDoc = await adminDb.collection('teams').doc(teamId)
+      .collection('tasks').doc(taskId).get();
 
-    if (!taskDoc.exists()) {
+    if (!taskDoc.exists) {
       return NextResponse.json({ 
         error: 'Task not found' 
       }, { status: 404 });
@@ -77,10 +77,10 @@ export async function POST(request) {
 
     // If suggesting reassignment, verify member exists in team
     if (suggestedReassignment) {
-      const suggestedMemberRef = doc(db, 'teams', teamId, 'members', suggestedReassignment);
-      const suggestedMemberDoc = await getDoc(suggestedMemberRef);
+      const suggestedMemberDoc = await adminDb.collection('teams').doc(teamId)
+        .collection('members').doc(suggestedReassignment).get();
 
-      if (!suggestedMemberDoc.exists()) {
+      if (!suggestedMemberDoc.exists) {
         return NextResponse.json({ 
           error: 'Suggested member not found in team' 
         }, { status: 404 });
@@ -90,7 +90,7 @@ export async function POST(request) {
     // Update task status
     const updateData = {
       status: response === 'accept' ? 'accepted' : 'rejected',
-      updatedAt: serverTimestamp()
+      updatedAt: FieldValue.serverTimestamp()
     };
 
     if (response === 'reject') {
@@ -100,11 +100,11 @@ export async function POST(request) {
       }
     }
 
-    await updateDoc(taskRef, updateData);
+    await adminDb.collection('teams').doc(teamId)
+      .collection('tasks').doc(taskId).update(updateData);
 
     // Create notification for the team leader
-    const notificationRef = doc(collection(db, 'notifications'));
-    await setDoc(notificationRef, {
+    await adminDb.collection('notifications').add({
       userId: teamData.leaderId,
       type: `task_${response}ed`,
       teamId,
@@ -115,7 +115,7 @@ export async function POST(request) {
       reason: response === 'reject' ? reason : undefined,
       suggestedReassignment: response === 'reject' ? suggestedReassignment : undefined,
       status: 'unread',
-      createdAt: serverTimestamp()
+      createdAt: FieldValue.serverTimestamp()
     });
 
     return NextResponse.json({
@@ -129,4 +129,4 @@ export async function POST(request) {
       error: 'Failed to process task response' 
     }, { status: 500 });
   }
-} 
+}
