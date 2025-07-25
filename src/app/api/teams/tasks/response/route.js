@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { adminDb, FieldValue } from '@/lib/firebase-admin';
+import { adminDb } from '@/config/firebase-admin';
 import { getAuthenticatedUser } from '@/lib/auth';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // POST /api/teams/tasks/response - Accept or reject a task
 export async function POST(request) {

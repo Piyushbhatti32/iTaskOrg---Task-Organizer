@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { adminDb, FieldValue } from '@/config/firebase-admin';
+import { adminDb } from '@/config/firebase-admin';
 import { getAuthenticatedUser } from '@/lib/auth';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // Helper function to validate email
 function isValidEmail(email) {
