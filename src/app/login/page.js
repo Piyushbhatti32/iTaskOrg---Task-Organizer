@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff, User, CheckCircle, AlertCircle, ArrowRight, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTheme } from '../../contexts/ThemeContext';
 
 // Enhanced Input Component
 function InputField({
@@ -20,16 +21,22 @@ function InputField({
   showPasswordToggle = false,
   onTogglePassword
 }) {
+  const { isDark } = useTheme();
+  
   return (
     <div className="space-y-1">
-      <label className="block text-sm font-medium text-gray-700">
+      <label className={`block text-sm font-medium ${
+        isDark ? 'text-gray-200' : 'text-gray-700'
+      }`}>
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
       <div className="relative">
         {Icon && (
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Icon className="h-5 w-5 text-gray-400" />
+            <Icon className={`h-5 w-5 ${
+              isDark ? 'text-gray-400' : 'text-gray-400'
+            }`} />
           </div>
         )}
         <input
@@ -38,8 +45,15 @@ function InputField({
           onChange={onChange}
           required={required}
           placeholder={placeholder}
-          className={`w-full ${Icon ? 'pl-10' : 'pl-4'} ${showPasswordToggle ? 'pr-10' : 'pr-4'} py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ${error ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white hover:border-gray-300'
-            }`}
+          className={`w-full ${Icon ? 'pl-10' : 'pl-4'} ${showPasswordToggle ? 'pr-10' : 'pr-4'} py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ${
+            error 
+              ? isDark 
+                ? 'border-red-400 bg-red-900/20 text-gray-100 placeholder-gray-400' 
+                : 'border-red-300 bg-red-50 text-gray-900 placeholder-gray-500'
+              : isDark 
+                ? 'border-gray-600 bg-gray-800/50 text-gray-100 placeholder-gray-400 hover:border-gray-500' 
+                : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500 hover:border-gray-300'
+          }`}
         />
         {showPasswordToggle && (
           <button
@@ -48,9 +62,13 @@ function InputField({
             className="absolute inset-y-0 right-0 pr-3 flex items-center"
           >
             {type === 'password' ? (
-              <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+              <EyeOff className={`h-5 w-5 ${
+                isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'
+              }`} />
             ) : (
-              <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+              <Eye className={`h-5 w-5 ${
+                isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'
+              }`} />
             )}
           </button>
         )}
@@ -67,6 +85,7 @@ function InputField({
 
 // Enhanced Login Form
 function LoginForm({ onSubmit, isLoading }) {
+  const { isDark } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -138,9 +157,13 @@ function LoginForm({ onSubmit, isLoading }) {
             type="checkbox"
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
-            className="w-4 h-4 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500"
+            className={`w-4 h-4 text-blue-600 border-2 rounded focus:ring-blue-500 ${
+              isDark ? 'border-gray-600 bg-gray-800' : 'border-gray-300 bg-white'
+            }`}
           />
-          <span className="text-sm text-gray-700">Remember me</span>
+          <span className={`text-sm ${
+            isDark ? 'text-gray-200' : 'text-gray-700'
+          }`}>Remember me</span>
         </label>
 
         <button
@@ -176,11 +199,17 @@ function LoginForm({ onSubmit, isLoading }) {
 
 // Enhanced Google Login Button
 function GoogleLoginButton({ onGoogleSignIn, isLoading }) {
+  const { isDark } = useTheme();
+  
   return (
     <button
       onClick={onGoogleSignIn}
       disabled={isLoading}
-      className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-200 py-3 px-4 rounded-xl font-medium hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+      className={`w-full flex items-center justify-center gap-3 border-2 py-3 px-4 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ${
+        isDark 
+          ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 hover:border-gray-500 text-gray-200' 
+          : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-900'
+      }`}
     >
       {isLoading ? (
         <>
@@ -216,6 +245,7 @@ function GoogleLoginButton({ onGoogleSignIn, isLoading }) {
 
 // Enhanced Registration Form
 function RegisterForm({ onSubmit, isLoading }) {
+  const { isDark } = useTheme();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -328,7 +358,7 @@ function RegisterForm({ onSubmit, isLoading }) {
         {formData.password && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">Password strength:</span>
+              <span className={isDark ? 'text-gray-300' : 'text-gray-600'}>Password strength:</span>
               <span className={`font-medium ${passwordStrength.label === 'Weak' ? 'text-red-600' :
                   passwordStrength.label === 'Fair' ? 'text-yellow-600' :
                     passwordStrength.label === 'Good' ? 'text-blue-600' :
@@ -337,7 +367,9 @@ function RegisterForm({ onSubmit, isLoading }) {
                 {passwordStrength.label}
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className={`w-full rounded-full h-2 ${
+              isDark ? 'bg-gray-700' : 'bg-gray-200'
+            }`}>
               <div
                 className={`h-2 rounded-full transition-all duration-300 ${passwordStrength.color}`}
                 style={{ width: `${passwordStrength.strength}%` }}
@@ -384,15 +416,25 @@ function RegisterForm({ onSubmit, isLoading }) {
 
 // Success Message Component
 function SuccessMessage({ message, onClose }) {
+  const { isDark } = useTheme();
+  
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+      <div className={`rounded-2xl shadow-2xl max-w-md w-full p-6 ${
+        isDark ? 'bg-gray-900 border border-gray-700' : 'bg-white'
+      }`}>
         <div className="text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+            isDark ? 'bg-green-900/30' : 'bg-green-100'
+          }`}>
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Success!</h3>
-          <p className="text-gray-600 mb-6">{message}</p>
+          <h3 className={`text-xl font-bold mb-2 ${
+            isDark ? 'text-gray-100' : 'text-gray-900'
+          }`}>Success!</h3>
+          <p className={`mb-6 ${
+            isDark ? 'text-gray-300' : 'text-gray-600'
+          }`}>{message}</p>
           <button
             onClick={onClose}
             className="w-full bg-green-600 text-white py-2 px-4 rounded-xl font-medium hover:bg-green-700 transition-colors"
@@ -413,7 +455,8 @@ export default function LoginPage() {
   const [redirecting, setRedirecting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [redirectAttempts, setRedirectAttempts] = useState(0);
-
+  
+  const { isDark } = useTheme();
   const {
     user,
     login,
@@ -533,7 +576,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className={`min-h-screen ${isDark ? 'bg-gray-950' : 'bg-gradient-to-br from-blue-50 via-white to-purple-50'} flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8`}>
       <div className="max-w-md w-full">
         {/* Header */}
         <div className="text-center mb-8">
@@ -547,33 +590,47 @@ export default function LoginPage() {
             style={{ filter: 'invert(1)' }}
           />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className={`text-3xl font-bold mb-2 ${
+            isDark ? 'text-gray-100' : 'text-gray-900'
+          }`}>
             Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">iTaskOrg</span>
           </h1>
-          <p className="text-gray-600">
+          <p className={isDark ? 'text-gray-300' : 'text-gray-600'}>
             {mode === "login" ? "Sign in to your account" : "Create your account"}
           </p>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg mb-6">
+          <div className={`border-l-4 border-red-500 p-4 rounded-lg mb-6 ${
+            isDark ? 'bg-red-900/20 border-red-400' : 'bg-red-50'
+          }`}>
             <div className="flex items-center">
               <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-              <span className="text-red-700">{error}</span>
+              <span className={isDark ? 'text-red-300' : 'text-red-700'}>{error}</span>
             </div>
           </div>
         )}
 
         {/* Main Card */}
-        <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl shadow-xl p-8">
+        <div className={`backdrop-blur-sm border rounded-2xl shadow-xl p-8 ${
+          isDark 
+            ? 'bg-gray-900/80 border-gray-700' 
+            : 'bg-white/80 border-gray-200'
+        }`}>
           {/* Mode Toggle */}
-          <div className="flex bg-gray-100 rounded-xl p-1 mb-8">
+          <div className={`flex rounded-xl p-1 mb-8 ${
+            isDark ? 'bg-gray-800' : 'bg-gray-100'
+          }`}>
             <button
               onClick={() => setMode("login")}
               className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${mode === "login"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? isDark 
+                    ? "bg-gray-700 text-gray-100 shadow-sm"
+                    : "bg-white text-gray-900 shadow-sm"
+                  : isDark
+                    ? "text-gray-400 hover:text-gray-200"
+                    : "text-gray-600 hover:text-gray-900"
                 }`}
             >
               Sign In
@@ -581,8 +638,12 @@ export default function LoginPage() {
             <button
               onClick={() => setMode("register")}
               className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${mode === "register"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? isDark 
+                    ? "bg-gray-700 text-gray-100 shadow-sm"
+                    : "bg-white text-gray-900 shadow-sm"
+                  : isDark
+                    ? "text-gray-400 hover:text-gray-200"
+                    : "text-gray-600 hover:text-gray-900"
                 }`}
             >
               Register
@@ -600,7 +661,9 @@ export default function LoginPage() {
                     <div className="w-full border-t border-gray-300" />
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="px-3 bg-white text-gray-500">Or continue with</span>
+                    <span className={`px-3 ${
+                      isDark ? 'bg-gray-900 text-gray-400' : 'bg-white text-gray-500'
+                    }`}>Or continue with</span>
                   </div>
                 </div>
 
@@ -618,7 +681,9 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <div className="text-center text-sm text-gray-500 mt-8">
+        <div className={`text-center text-sm mt-8 ${
+          isDark ? 'text-gray-400' : 'text-gray-500'
+        }`}>
           <p>
             By continuing, you agree to our{" "}
             <Link href="/terms" className="text-blue-600 hover:text-blue-800 font-medium">

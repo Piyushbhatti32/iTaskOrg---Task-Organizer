@@ -4,9 +4,15 @@ import { adminDb } from '../../../../config/firebase-admin';
 // Get notifications for a user
 export async function GET(request) {
   try {
+    // Check if Firebase Admin is properly initialized
+    if (!adminDb) {
+      console.error('Firebase Admin DB not initialized - check your Firebase configuration');
+      return new Response('Firebase service unavailable - check server configuration', { status: 503 });
+    }
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
-    const status = searchParams.get('status') || 'unread';
+    const status = searchParams.get('status');
     
     if (!userId) {
       return new Response('User ID is required', { status: 400 });
@@ -14,9 +20,14 @@ export async function GET(request) {
 
     // Get user's notifications from Firestore
     let notificationsQuery = adminDb.collection('notifications')
-      .where('userId', '==', userId)
-      .where('status', '==', status)
-      .limit(50);
+      .where('userId', '==', userId);
+    
+    // Only add status filter if status parameter is provided
+    if (status) {
+      notificationsQuery = notificationsQuery.where('status', '==', status);
+    }
+    
+    notificationsQuery = notificationsQuery.limit(50);
     
     const snapshot = await notificationsQuery.get();
     const notifications = snapshot.docs

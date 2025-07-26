@@ -1,16 +1,36 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/config/firebase';
-import { 
-  collection,
-  query,
-  where,
-  getDocs,
-  writeBatch
-} from 'firebase/firestore';
+import { adminDb, adminAuth } from '@/config/firebase-admin';
 
 // POST /api/notifications/mark-all-read - Mark all notifications as read
 export async function POST(request) {
   try {
+    // Check if admin SDK is available
+    if (!adminDb || !adminAuth) {
+      console.error('Firebase Admin SDK not properly initialized');
+      return NextResponse.json({ 
+        error: 'Server configuration error' 
+      }, { status: 503 });
+    }
+
+    // Check authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ 
+        error: 'Authentication required' 
+      }, { status: 401 });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let decodedToken;
+    try {
+      decodedToken = await adminAuth.verifyIdToken(token);
+    } catch (authError) {
+      console.error('Auth verification failed:', authError);
+      return NextResponse.json({ 
+        error: 'Invalid authentication token' 
+      }, { status: 401 });
+    }
+
     const data = await request.json();
     const { userId } = data;
 
@@ -20,14 +40,19 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Get all unread notifications for the user
-    const notificationsRef = collection(db, 'notifications');
-    const q = query(
-      notificationsRef,
-      where('userId', '==', userId),
-      where('status', '==', 'unread')
-    );
-    const querySnapshot = await getDocs(q);
+    // Verify the user is marking their own notifications
+    if (userId !== decodedToken.uid) {
+      return NextResponse.json({ 
+        error: 'Unauthorized: Cannot mark other users\' notifications as read' 
+      }, { status: 403 });
+    }
+
+    // Get all unread notifications for the user using admin SDK
+    const notificationsRef = adminDb.collection('notifications');
+    const querySnapshot = await notificationsRef
+      .where('userId', '==', userId)
+      .where('status', '==', 'unread')
+      .get();
 
     if (querySnapshot.empty) {
       return NextResponse.json({
@@ -36,7 +61,7 @@ export async function POST(request) {
     }
 
     // Use batch write to update all notifications
-    const batch = writeBatch(db);
+    const batch = adminDb.batch();
     querySnapshot.forEach((doc) => {
       batch.update(doc.ref, { status: 'read' });
     });
@@ -53,4 +78,4 @@ export async function POST(request) {
       error: 'Failed to mark all notifications as read' 
     }, { status: 500 });
   }
-} 
+}

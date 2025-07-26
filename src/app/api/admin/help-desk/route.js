@@ -1,37 +1,19 @@
-import { adminDb, adminAuth } from '../../../../config/firebase-admin';
-import { NextRequest } from 'next/server';
+import { adminDb } from '../../../../config/firebase-admin';
+import { verifyAdminAccess, createUnauthorizedResponse } from '../../../../utils/adminAuth';
 
 export async function GET(request) {
-  console.log('🔍 Admin API called');
+  console.log('🔍 Admin help desk API called');
   
   try {
-    // Verify authentication token
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-    
-    // Check if user is admin
-    const adminEmails = [
-      'itaskorg@gmail.com',
-      'itaskorg+admin@gmail.com', 
-      'itaskorg+support@gmail.com',
-      'piyushbhatti32@gmail.com'
-    ];
-    if (!adminEmails.includes(decodedToken.email?.toLowerCase())) {
-      return new Response(JSON.stringify({ error: 'Forbidden - Admin access required' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    // Verify admin access
+    const verification = await verifyAdminAccess(request);
+    if (!verification.authorized) {
+      const status = verification.error === 'Missing or invalid authorization header' || 
+                     verification.error === 'Invalid or expired token' ? 401 : 403;
+      return createUnauthorizedResponse(verification.error, status);
     }
     
-    console.log('🔍 Admin access verified for:', decodedToken.email);
+    console.log('🔍 Admin access verified for:', verification.user.email);
     
     // Check if Admin SDK is initialized
     if (!adminDb) {

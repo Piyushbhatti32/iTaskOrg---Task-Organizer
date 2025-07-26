@@ -57,6 +57,8 @@ if (getApps().length === 0) {
     console.log('Firebase Admin SDK initialized successfully');
   } catch (error) {
     console.error('Error initializing Firebase Admin SDK:', error);
+    console.error('Please ensure Firebase service account credentials are properly configured');
+    console.error('Check your .env.local file for FIREBASE_SERVICE_ACCOUNT_KEY or other Firebase admin settings');
     // Set to null to indicate initialization failure
     app = null;
     adminDb = null;

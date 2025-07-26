@@ -6,6 +6,7 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { isAdmin } from '../../../utils/roles';
 import { useRouter } from 'next/navigation';
 import { isValidDate, safeFormatDateTime } from '../../../utils/dateUtils';
+import AdminAccessDenied from '../../../components/admin/AdminAccessDenied';
 import { 
   Users,
   Search, 
@@ -147,18 +148,30 @@ export default function AdminHelpDeskPage() {
     }
   }, [user]);
 
-  // Check if user is admin
+  // Check if user is admin with more robust checking
   useEffect(() => {
-    if (user) {
+    const checkAdminAccess = async () => {
+      if (!user) {
+        setIsAuthorized(null); // Still checking
+        return;
+      }
+
+      // Check if user is admin
       if (isAdmin(user)) {
+        console.log('✅ Admin access granted for:', user.email);
         setIsAuthorized(true);
       } else {
+        console.warn('❌ Admin access denied for:', user.email);
         setIsAuthorized(false);
-        router.push('/help-desk'); // Redirect non-admin users to regular help desk
+        
+        // Show brief message before redirecting
+        setTimeout(() => {
+          router.push('/help-desk');
+        }, 2000);
       }
-    } else {
-      setIsAuthorized(null); // Still checking
-    }
+    };
+
+    checkAdminAccess();
   }, [user, router]);
 
   // Fetch all tickets when authorized
@@ -309,8 +322,8 @@ const getTicketStats = () => {
 
   const stats = getTicketStats();
 
-  // Don't render anything while checking authorization or for non-admin users
-  if (isAuthorized === null || isAuthorized === false || loading) {
+  // Loading state
+  if (isAuthorized === null || loading) {
     return (
       <div className={`min-h-screen p-6 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
         <div className="flex items-center justify-center h-64">
@@ -318,6 +331,11 @@ const getTicketStats = () => {
         </div>
       </div>
     );
+  }
+
+  // Access denied for non-admin users
+  if (isAuthorized === false) {
+    return <AdminAccessDenied />;
   }
 
   return (

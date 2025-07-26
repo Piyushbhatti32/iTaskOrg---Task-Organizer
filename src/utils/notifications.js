@@ -280,6 +280,357 @@ export function formatNotificationMessage(type, action, resource, actor) {
 }
 
 /**
+ * Send task assignment request notification (team leader assigns task to member)
+ * @param {string} assignedUserId - The ID of the user being assigned the task
+ * @param {string} taskTitle - The title of the task being assigned
+ * @param {string} assignedBy - The name of the user who assigned the task
+ * @param {string} taskId - Task ID for linking
+ * @param {string} requestId - Unique request ID for approval/rejection
+ */
+export async function sendTaskAssignmentRequestNotification(assignedUserId, taskTitle, assignedBy, taskId, requestId) {
+  try {
+    const notificationData = {
+      recipientId: assignedUserId,
+      type: 'task',
+      title: '🎯 Task Assignment Request',
+      message: `${assignedBy} has assigned you a task: "${taskTitle}". Please accept or decline this assignment.`,
+      senderName: assignedBy,
+      data: {
+        taskTitle,
+        assignedBy,
+        taskId,
+        requestId,
+        type: 'task_assignment_request',
+        link: `/tasks/assignment-request/${requestId}`,
+        requiresAction: true,
+        actions: [
+          { type: 'accept', label: 'Accept Task' },
+          { type: 'decline', label: 'Decline Task' }
+        ]
+      }
+    };
+
+    const response = await fetch('/api/notifications/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(notificationData)
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send notification');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error sending task assignment request notification:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send task viewing permission request notification (member requests to view leader's tasks)
+ * @param {string} leaderId - The ID of the team leader
+ * @param {string} memberName - The name of the team member requesting permission
+ * @param {string} memberId - The ID of the requesting member
+ * @param {string} teamId - The team ID
+ * @param {string} requestId - Unique request ID for approval/rejection
+ */
+export async function sendTaskViewingRequestNotification(leaderId, memberName, memberId, teamId, requestId) {
+  try {
+    const notificationData = {
+      recipientId: leaderId,
+      type: 'team',
+      title: '👁️ Task Viewing Permission Request',
+      message: `${memberName} is requesting permission to view your tasks. Grant access to allow them to see your task list.`,
+      senderName: memberName,
+      data: {
+        memberName,
+        memberId,
+        teamId,
+        requestId,
+        type: 'task_viewing_request',
+        link: `/team/permission-request/${requestId}`,
+        requiresAction: true,
+        actions: [
+          { type: 'grant', label: 'Grant Access' },
+          { type: 'deny', label: 'Deny Access' }
+        ]
+      }
+    };
+
+    const response = await fetch('/api/notifications/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(notificationData)
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send notification');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error sending task viewing request notification:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send help desk ticket status notification
+ * @param {string} userId - The ID of the ticket creator
+ * @param {string} ticketId - The ticket ID
+ * @param {string} status - The new status (in_progress, resolved, closed)
+ * @param {string} adminName - The name of the admin updating the ticket
+ */
+export async function sendHelpDeskStatusNotification(userId, ticketId, status, adminName) {
+  const statusEmojis = {
+    in_progress: '🔄',
+    resolved: '✅',
+    closed: '🔒'
+  };
+
+  const statusMessages = {
+    in_progress: 'is now being worked on',
+    resolved: 'has been resolved',
+    closed: 'has been closed'
+  };
+
+  try {
+    const notificationData = {
+      recipientId: userId,
+      type: 'system',
+      title: `${statusEmojis[status]} Help Desk Ticket Update`,
+      message: `Your support ticket #${ticketId} ${statusMessages[status]} by ${adminName}.`,
+      senderName: adminName,
+      data: {
+        ticketId,
+        status,
+        adminName,
+        type: 'help_desk_status',
+        link: `/help-desk/ticket/${ticketId}`
+      }
+    };
+
+    const response = await fetch('/api/notifications/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(notificationData)
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send notification');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error sending help desk status notification:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send task deletion notification
+ * @param {string} userId - The ID of the task owner
+ * @param {string} taskTitle - The title of the deleted task
+ * @param {string} reason - Reason for deletion (optional)
+ */
+export async function sendTaskDeletionNotification(userId, taskTitle, reason = null) {
+  try {
+    const notificationData = {
+      recipientId: userId,
+      type: 'task',
+      title: '🗑️ Task Deleted',
+      message: `Your task "${taskTitle}" has been deleted${reason ? `. Reason: ${reason}` : '.'}`,
+      senderName: 'System',
+      data: {
+        taskTitle,
+        reason,
+        type: 'task_deletion',
+        link: '/tasks'
+      }
+    };
+
+    const response = await fetch('/api/notifications/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(notificationData)
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send notification');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error sending task deletion notification:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send feature announcement notification
+ * @param {Array} userIds - Array of user IDs to notify
+ * @param {string} featureTitle - The title of the new feature
+ * @param {string} description - Description of the feature
+ * @param {string} link - Optional link to feature documentation
+ */
+export async function sendFeatureAnnouncementNotification(userIds, featureTitle, description, link = null) {
+  try {
+    const promises = userIds.map(async userId => {
+      const notificationData = {
+        recipientId: userId,
+        type: 'system',
+        title: '🚀 New Feature Available!',
+        message: `${featureTitle}: ${description}`,
+        senderName: 'iTaskOrg Team',
+        data: {
+          featureTitle,
+          description,
+          type: 'feature_announcement',
+          link: link || '/settings'
+        }
+      };
+
+      const response = await fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(notificationData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to send notification to user ${userId}: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    });
+
+    const results = await Promise.allSettled(promises);
+    const successful = results.filter(result => result.status === 'fulfilled').length;
+    const failed = results.filter(result => result.status === 'rejected').length;
+
+    // Log failed notifications for debugging
+    if (failed > 0) {
+      const failedResults = results.filter(result => result.status === 'rejected');
+      console.error('Failed to send some feature announcement notifications:', failedResults.map(r => r.reason));
+    }
+
+    console.log(`Feature announcement sent: ${successful} successful, ${failed} failed out of ${userIds.length} total`);
+
+    return {
+      successful,
+      failed,
+      total: userIds.length
+    };
+  } catch (error) {
+    console.error('Error sending feature announcement notifications:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send task assignment response notification (member accepts/declines task)
+ * @param {string} leaderId - The ID of the team leader who assigned the task
+ * @param {string} memberName - The name of the member responding
+ * @param {string} taskTitle - The title of the task
+ * @param {string} response - 'accepted' or 'declined'
+ * @param {string} reason - Reason for declining (optional)
+ * @param {string} taskId - Task ID for linking
+ */
+export async function sendTaskAssignmentResponseNotification(leaderId, memberName, taskTitle, response, reason = null, taskId = null) {
+  const responseEmojis = {
+    accepted: '✅',
+    declined: '❌'
+  };
+
+  try {
+    const notificationData = {
+      recipientId: leaderId,
+      type: 'task',
+      title: `${responseEmojis[response]} Task Assignment ${response === 'accepted' ? 'Accepted' : 'Declined'}`,
+      message: `${memberName} has ${response} the task assignment: "${taskTitle}"${reason ? `. Reason: ${reason}` : '.'}`,
+      senderName: memberName,
+      data: {
+        memberName,
+        taskTitle,
+        response,
+        reason,
+        taskId,
+        type: 'task_assignment_response',
+        link: taskId ? `/tasks/${taskId}` : '/tasks'
+      }
+    };
+
+    const response = await fetch('/api/notifications/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(notificationData)
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send notification');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error sending task assignment response notification:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send NotificationCenter feature announcement to all users
+ * @param {Array} userIds - Array of user IDs to notify
+ */
+export async function sendNotificationCenterAnnouncementNotification(userIds) {
+  const featureTitle = "New NotificationCenter";
+  const description = "Stay on top of everything! Our new comprehensive notification center helps you manage task assignments, team updates, system alerts, and more - all in one convenient place with real-time updates and actionable notifications.";
+  const link = "/notifications";
+
+  try {
+    const promises = userIds.map(userId => {
+      const notificationData = {
+        recipientId: userId,
+        type: 'system',
+        title: '🔔 Introducing NotificationCenter!',
+        message: `${featureTitle}: ${description}`,
+        senderName: 'iTaskOrg Team',
+        data: {
+          featureTitle,
+          description,
+          type: 'feature_announcement',
+          subtype: 'notification_center',
+          link,
+          priority: 'high',
+          category: 'product_update'
+        }
+      };
+
+      return fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(notificationData)
+      });
+    });
+
+    const results = await Promise.allSettled(promises);
+    const successful = results.filter(result => result.status === 'fulfilled').length;
+    const failed = results.filter(result => result.status === 'rejected').length;
+
+    console.log(`NotificationCenter announcement sent to ${successful}/${userIds.length} users`);
+    
+    return {
+      successful,
+      failed,
+      total: userIds.length,
+      feature: 'NotificationCenter'
+    };
+  } catch (error) {
+    console.error('Error sending NotificationCenter announcement notifications:', error);
+    throw error;
+  }
+}
+
+/**
  * Get notification link based on type and resource ID
  * @param {string} type - The notification type
  * @param {string} resourceId - The ID of the resource

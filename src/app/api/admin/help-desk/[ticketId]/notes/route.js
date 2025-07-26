@@ -1,19 +1,16 @@
-import { adminDb, adminAuth } from '../../../../../../config/firebase-admin';
+import { adminDb } from '../../../../../../config/firebase-admin';
+import { verifyAdminAccess, createUnauthorizedResponse } from '../../../../../../utils/adminAuth';
 import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(req, { params }) {
   try {
-    // Verify authentication token
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    // Verify admin access
+    const verification = await verifyAdminAccess(req);
+    if (!verification.authorized) {
+      const status = verification.error === 'Missing or invalid authorization header' || 
+                     verification.error === 'Invalid or expired token' ? 401 : 403;
+      return createUnauthorizedResponse(verification.error, status);
     }
-
-    const token = authHeader.split('Bearer ')[1];
-    await adminAuth.verifyIdToken(token);
     
     // Check if Admin SDK is initialized
     if (!adminDb) {

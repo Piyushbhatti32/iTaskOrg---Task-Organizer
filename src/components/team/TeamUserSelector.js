@@ -2,15 +2,17 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, X, Mail, Shield, Users, User, ChevronDown, UserPlus } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const TEAM_ROLES = [
-  { value: 'member', label: 'Member', icon: User, color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  { value: 'admin', label: 'Admin', icon: Shield, color: 'bg-purple-100 text-purple-800 border-purple-200' },
-  { value: 'leader', label: 'Leader', icon: Users, color: 'bg-green-100 text-green-800 border-green-200' }
+const DEFAULT_TEAM_ROLES = [
+  { value: 'member', label: 'Member', icon: User, color: 'bg-blue-100 text-blue-800 border-blue-200', darkColor: 'bg-blue-900/30 text-blue-300 border-blue-600' },
+  { value: 'admin', label: 'Admin', icon: Shield, color: 'bg-purple-100 text-purple-800 border-purple-200', darkColor: 'bg-purple-900/30 text-purple-300 border-purple-600' },
+  { value: 'leader', label: 'Leader', icon: Users, color: 'bg-green-100 text-green-800 border-green-200', darkColor: 'bg-green-900/30 text-green-300 border-green-600' }
 ];
 
 export default function TeamUserSelector({ 
   selectedUsers = [], 
   onUsersChange, 
+  customRoles = [],
+  onCustomRoleAdd,
   placeholder = "Search users by email or name...",
   maxUsers = 10
 }) {
@@ -20,10 +22,23 @@ export default function TeamUserSelector({
   const [availableUsers, setAvailableUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [emailInput, setEmailInput] = useState('');
-  const [showManualEntry, setShowManualEntry] = useState(false);
+  const [customRoleInput, setCustomRoleInput] = useState('');
+  const [showCustomRoleEntry, setShowCustomRoleEntry] = useState(false);
   const dropdownRef = useRef(null);
   const searchInputRef = useRef(null);
+
+  // Combine default roles with custom roles
+  const TEAM_ROLES = [
+    ...DEFAULT_TEAM_ROLES,
+    ...customRoles.map(role => ({
+      value: role.toLowerCase().replace(/\s+/g, '_'),
+      label: role,
+      icon: User,
+      color: isDark ? 'bg-gray-800/30 text-gray-300 border-gray-600' : 'bg-gray-100 text-gray-800 border-gray-200',
+      darkColor: 'bg-gray-800/30 text-gray-300 border-gray-600',
+      isCustom: true
+    }))
+  ];
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -31,7 +46,6 @@ export default function TeamUserSelector({
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
         setSearchQuery('');
-        setShowManualEntry(false);
       }
     };
 
@@ -102,40 +116,6 @@ export default function TeamUserSelector({
     setIsOpen(false);
   };
 
-  const handleManualEmailAdd = () => {
-    const email = emailInput.trim();
-    
-    if (!isValidEmail(email)) {
-      setError('Please enter a valid email address');
-      return;
-    }
-
-    if (selectedUsers.some(user => user.email === email)) {
-      setError('This email is already added');
-      return;
-    }
-
-    if (selectedUsers.length >= maxUsers) {
-      setError(`Maximum ${maxUsers} users allowed`);
-      return;
-    }
-
-    // Extract name from email (simple heuristic)
-    const name = email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-
-    const newUser = {
-      id: `manual-${Date.now()}`, // Temporary ID for manual entries
-      name: name,
-      email: email,
-      role: 'member',
-      isManual: true // Flag to indicate this was manually added
-    };
-
-    onUsersChange([...selectedUsers, newUser]);
-    setEmailInput('');
-    setShowManualEntry(false);
-    setError(null);
-  };
 
   const handleUserRemove = (email) => {
     onUsersChange(selectedUsers.filter(user => user.email !== email));
@@ -164,6 +144,28 @@ export default function TeamUserSelector({
     setError(null);
   };
 
+  const handleCustomRoleAdd = () => {
+    const role = customRoleInput.trim();
+    
+    if (!role) {
+      setError('Please enter a role name');
+      return;
+    }
+
+    if (TEAM_ROLES.some(r => r.label.toLowerCase() === role.toLowerCase())) {
+      setError('This role already exists');
+      return;
+    }
+
+    if (onCustomRoleAdd) {
+      onCustomRoleAdd(role);
+    }
+    
+    setCustomRoleInput('');
+    setShowCustomRoleEntry(false);
+    setError(null);
+  };
+
   return (
     <div className="relative" ref={dropdownRef}>
       <label className={`block text-sm font-medium mb-1.5 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
@@ -180,16 +182,13 @@ export default function TeamUserSelector({
             return (
               <div
                 key={user.email}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl border font-medium text-sm transition-all duration-200 hover:shadow-sm ${roleInfo.color}`}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl border font-medium text-sm transition-all duration-200 hover:shadow-sm ${isDark ? roleInfo.darkColor || roleInfo.color : roleInfo.color}`}
               >
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-current opacity-20 flex items-center justify-center text-current text-xs font-bold">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                   <span className="font-medium">{user.name}</span>
-                  {user.isManual && (
-                    <Mail className="w-3 h-3 opacity-60" title="Manually added" />
-                  )}
                 </div>
                 
                 {/* Role Selector */}
@@ -256,57 +255,17 @@ export default function TeamUserSelector({
           
           {!loading && searchQuery.trim().length >= 2 && availableUsers.length === 0 && (
             <div className={`p-4 text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              <p className="text-sm mb-3">No registered users found matching &quot;{searchQuery}&quot;</p>
-              <button
-                onClick={() => setShowManualEntry(true)}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1 mx-auto"
-              >
-                <UserPlus className="w-4 h-4" />
-                Add email manually
-              </button>
+              <p className="text-sm">No registered users found matching &quot;{searchQuery}&quot;</p>
+              <p className="text-xs mt-1 opacity-75">Only registered users can be added to teams</p>
             </div>
           )}
           
           {!loading && searchQuery.trim().length < 2 && (
             <div className={`p-4 text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              <p className="text-sm mb-3">Type at least 2 characters to search users</p>
-              <button
-                onClick={() => setShowManualEntry(true)}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1 mx-auto"
-              >
-                <UserPlus className="w-4 h-4" />
-                Add email manually
-              </button>
+              <p className="text-sm">Type at least 2 characters to search registered users</p>
             </div>
           )}
           
-          {/* Manual Email Entry */}
-          {showManualEntry && (
-            <div className={`p-4 border-b ${isDark ? 'border-gray-600 bg-gray-700' : 'border-gray-200 bg-gray-50'}`}>
-              <p className={`text-sm font-medium mb-2 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Add user by email:</p>
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  placeholder="user@example.com"
-                  className={`flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isDark ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900 placeholder-gray-500'}`}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleManualEmailAdd();
-                    }
-                  }}
-                />
-                <button
-                  onClick={handleManualEmailAdd}
-                  className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
-                >
-                  Add
-                </button>
-              </div>
-            </div>
-          )}
           
           {!loading && availableUsers.length > 0 && (
             <div className="py-2">
@@ -330,12 +289,69 @@ export default function TeamUserSelector({
         </div>
       )}
       
+      {/* Custom Role Management Section */}
+      {onCustomRoleAdd && (
+        <div className={`mt-4 p-4 rounded-xl border ${isDark ? 'border-gray-600 bg-gray-800/30' : 'border-gray-200 bg-gray-50'}`}>
+          <h4 className={`text-sm font-medium mb-2 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Custom Roles</h4>
+          
+          {customRoles.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-1">
+              {customRoles.map((role, index) => (
+                <span key={index} className={`px-2 py-1 rounded-lg text-xs font-medium ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
+                  {role}
+                </span>
+              ))}
+            </div>
+          )}
+          
+          {!showCustomRoleEntry ? (
+            <button
+              onClick={() => setShowCustomRoleEntry(true)}
+              className={`text-sm font-medium ${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'}`}
+            >
+              + Add Custom Role
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={customRoleInput}
+                onChange={(e) => setCustomRoleInput(e.target.value)}
+                placeholder="e.g., Designer, Tester, DevOps"
+                className={`flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isDark ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900 placeholder-gray-500'}`}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleCustomRoleAdd();
+                  }
+                }}
+              />
+              <button
+                onClick={handleCustomRoleAdd}
+                className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
+              >
+                Add
+              </button>
+              <button
+                onClick={() => {
+                  setShowCustomRoleEntry(false);
+                  setCustomRoleInput('');
+                }}
+                className={`px-3 py-2 rounded-lg text-sm ${isDark ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'}`}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      
       {/* Helper Text */}
       <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
         {selectedUsers.length > 0 ? (
-          `${selectedUsers.length} of ${maxUsers} users selected`
+          `${selectedUsers.length} of ${maxUsers} registered users selected`
         ) : (
-          "Search for registered users or add emails manually"
+          "Search for registered users by email or name"
         )}
       </p>
     </div>

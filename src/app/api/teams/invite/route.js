@@ -84,17 +84,31 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Add user as team member
-    await adminDb.collection('teams')
-      .doc(teamId)
-      .collection('members')
-      .doc(userId)
-      .set({
-        email: userData.email,
-        name: userData.name || '',
-        role: 'member',
-        joinedAt: FieldValue.serverTimestamp()
-      });
+    // Check if there's already a pending invitation
+    const existingInvite = await adminDb.collection('team_invitations')
+      .where('teamId', '==', teamId)
+      .where('invitedUserId', '==', userId)
+      .where('status', '==', 'pending')
+      .get();
+
+    if (!existingInvite.empty) {
+      return NextResponse.json({ 
+        error: 'User already has a pending invitation for this team' 
+      }, { status: 400 });
+    }
+
+    // Create pending team invitation instead of directly adding member
+    await adminDb.collection('team_invitations').add({
+      teamId,
+      teamName: teamData.name,
+      teamLeaderId: user.uid,
+      teamLeaderName: user.displayName || user.email.split('@')[0],
+      invitedUserId: userId,
+      invitedUserEmail: userData.email,
+      invitedUserName: userData.name || userData.email.split('@')[0],
+      status: 'pending',
+      createdAt: FieldValue.serverTimestamp()
+    });
 
     // Create notification for the invited user
     await adminDb.collection('notifications').add({
@@ -102,13 +116,15 @@ export async function POST(request) {
       type: 'team_invite',
       teamId,
       teamName: teamData.name,
+      teamLeaderName: user.displayName || user.email.split('@')[0],
+      message: `You have been invited to join the team "${teamData.name}"`,
       status: 'unread',
       createdAt: FieldValue.serverTimestamp()
     });
 
     return NextResponse.json({
-      message: 'Team invitation sent successfully',
-      memberId: userId
+      message: 'Team invitation sent successfully. User will receive a notification to accept or decline.',
+      invitationId: userId
     });
   } catch (error) {
     console.error('Error inviting team member:', error);

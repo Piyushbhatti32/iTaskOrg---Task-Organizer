@@ -65,10 +65,17 @@ export default function TeamCreateForm({ onTeamCreated }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedUsers, setSelectedUsers] = useState([]);
+  const [customRoles, setCustomRoles] = useState([]);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [loading, setLoading] = useState(false);
 
+
+  const handleCustomRoleAdd = (role) => {
+    if (!customRoles.includes(role)) {
+      setCustomRoles([...customRoles, role]);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -88,38 +95,56 @@ export default function TeamCreateForm({ onTeamCreated }) {
       setLoading(false);
       return;
     }
-    if (selectedUsers.length === 0) {
-      setError('Add at least one team member');
-      setLoading(false);
-      return;
-    }
+    
+    // Note: We don't require members as the team creator automatically becomes the leader
+    // Users can be added later
+    
     try {
+      // Get the token first and log it for debugging
+      const token = await user.getIdToken();
+      console.log('Token obtained:', token ? 'Token exists' : 'No token');
+      console.log('Token length:', token ? token.length : 0);
+      
       const res = await fetch('/api/teams/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          // Include the Authorization header for authentication
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ 
-          name, 
-          description, 
-          leaderId: user.uid,
-          members: selectedUsers.map(user => ({
-            email: user.email,
-            name: user.name,
-            role: user.role
-          }))
+          name: name.trim(), 
+          description: description.trim(), 
+          members: selectedUsers.map(member => ({
+            id: member.id,
+            email: member.email,
+            name: member.name,
+            role: member.role,
+            isManual: member.isManual || false
+          })),
+          customRoles: customRoles
         })
       });
+      
       const data = await res.json();
+      
       if (!res.ok) {
-        setError(data.error || 'Failed to create team');
+        setError(data.error || data.errors?.join(', ') || 'Failed to create team');
       } else {
-        setSuccess('Team created successfully!');
+        setSuccess(`Team "${name}" created successfully! You are now the team leader.`);
+        // Reset form
         setName('');
         setDescription('');
         setSelectedUsers([]);
-        if (onTeamCreated) onTeamCreated(data);
+        setCustomRoles([]);
+        
+        if (onTeamCreated) {
+          onTeamCreated(data);
+        }
       }
     } catch (err) {
-      setError('Network error');
+      console.error('Team creation error:', err);
+      setError('Network error. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -165,6 +190,8 @@ export default function TeamCreateForm({ onTeamCreated }) {
         <TeamUserSelector
           selectedUsers={selectedUsers}
           onUsersChange={setSelectedUsers}
+          customRoles={customRoles}
+          onCustomRoleAdd={handleCustomRoleAdd}
         />
       </div>
       {error && <div className="text-red-600 text-sm">{error}</div>}

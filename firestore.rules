@@ -16,7 +16,7 @@ service cloud.firestore {
     
     function isAdmin() {
       return isAuthenticated() && 
-        request.auth.token.email in ['itaskorg@gmail.com', 'itaskorg+admin@gmail.com', 'itaskorg+support@gmail.com'];
+        request.auth.token.email in ['itaskorg@gmail.com', 'itaskorg+admin@gmail.com', 'itaskorg+support@gmail.com', 'piyushbhatti32@gmail.com'];
     }
     
     // Users collection - allow authenticated users to read all users for search/assignment
@@ -87,6 +87,11 @@ service cloud.firestore {
     // Counters collection for generating ticket numbers
     match /counters/{counterId} {
       allow read, write: if isAuthenticated();
+    }
+    
+    // Announcements collection (admin only)
+    match /announcements/{announcementId} {
+      allow read, write: if isAdmin();
     }
   }
 }

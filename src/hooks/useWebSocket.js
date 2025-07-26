@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { auth } from '@/config/firebase';
 
 export function useWebSocket(teamIds) {
   const { user } = useAuth();
@@ -14,12 +15,22 @@ export function useWebSocket(teamIds) {
   // Handle incoming WebSocket messages
   const handleWebSocketMessage = useCallback((data) => {
     switch (data.type) {
-      case 'presence':
+      case 'auth_success':
+        console.log('WebSocket authentication successful');
+        break;
+        
+      case 'auth_error':
+        console.error('WebSocket authentication failed:', data.message);
+        setError('Authentication failed');
+        break;
+
+      case 'presence_update':
         setTeamPresence(prev => ({
           ...prev,
           [data.userId]: {
             status: data.status,
-            timestamp: data.timestamp
+            timestamp: data.timestamp,
+            teamId: data.teamId
           }
         }));
         break;
@@ -49,82 +60,162 @@ export function useWebSocket(teamIds) {
         }
         break;
 
+      case 'notification':
+        // Handle real-time notifications
+        console.log('Received notification:', data.notification);
+        // This can be handled by components using this hook
+        break;
+
+      case 'heartbeat':
+        // Respond to server heartbeat
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: 'heartbeat_response' }));
+        }
+        break;
+
       default:
-        // Handle other message types in the component using this hook
+        console.log('Unknown message type:', data.type);
         break;
     }
-  }, []);
+  }, [socket]);
 
   // Connect to WebSocket
   useEffect(() => {
     if (!user || !teamIds.length) return;
 
-    // Copy ref values to avoid stale closure issues
-    const currentTypingTimeouts = typingTimeoutRef.current;
+    let ws = null;
+    let authenticationTimeout = null;
 
-    const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/ws?userId=${user.uid}&teamIds=${teamIds.join(',')}`;
-    const ws = new WebSocket(wsUrl);
-
-    ws.onopen = () => {
-      console.log('WebSocket connected');
-      setIsConnected(true);
-      setError(null);
-    };
-
-    ws.onclose = () => {
-      console.log('WebSocket disconnected');
-      setIsConnected(false);
-      setSocket(null);
-
-      // Clear any existing reconnect timeout
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-
-      // Attempt to reconnect after 5 seconds
-      reconnectTimeoutRef.current = setTimeout(() => {
-        if (user) {
-          console.log('Attempting to reconnect...');
-          setSocket(null);
-        }
-      }, 5000);
-    };
-
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      setError('Failed to connect to real-time service');
-    };
-
-    ws.onmessage = (event) => {
+    const connectWebSocket = async () => {
       try {
-        const data = JSON.parse(event.data);
-        handleWebSocketMessage(data);
+        // Copy ref values to avoid stale closure issues
+        const currentTypingTimeouts = typingTimeoutRef.current;
+
+        // Get Firebase ID token for authentication
+        const token = await auth.currentUser.getIdToken();
+        
+        const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/websocket`;
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          console.log('WebSocket connected, authenticating...');
+          
+          // Send authentication message
+          ws.send(JSON.stringify({
+            type: 'authenticate',
+            token: token,
+            teamIds: teamIds
+          }));
+
+          // Set timeout for authentication
+          authenticationTimeout = setTimeout(() => {
+            console.error('Authentication timeout');
+            setError('Authentication timeout');
+            ws.close();
+          }, 10000); // 10 second timeout
+        };
+
+        ws.onclose = (event) => {
+          console.log('WebSocket disconnected:', event.code, event.reason);
+          setIsConnected(false);
+          setSocket(null);
+
+          if (authenticationTimeout) {
+            clearTimeout(authenticationTimeout);
+          }
+
+          // Clear any existing reconnect timeout
+          if (reconnectTimeoutRef.current) {
+            clearTimeout(reconnectTimeoutRef.current);
+          }
+
+          // Only attempt to reconnect if not a deliberate close
+          if (event.code !== 1000 && user) {
+            console.log('Attempting to reconnect in 5 seconds...');
+            reconnectTimeoutRef.current = setTimeout(() => {
+              if (user) {
+                connectWebSocket();
+              }
+            }, 5000);
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          setError('Failed to connect to real-time service');
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            // Handle authentication success
+            if (data.type === 'auth_success') {
+              if (authenticationTimeout) {
+                clearTimeout(authenticationTimeout);
+                authenticationTimeout = null;
+              }
+              setIsConnected(true);
+              setError(null);
+              console.log('WebSocket authenticated successfully');
+            }
+            
+            handleWebSocketMessage(data);
+          } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
+          }
+        };
+
+        setSocket(ws);
+
+        return () => {
+          if (authenticationTimeout) {
+            clearTimeout(authenticationTimeout);
+          }
+          if (ws) {
+            ws.close(1000, 'Component unmounting');
+          }
+          if (reconnectTimeoutRef.current) {
+            clearTimeout(reconnectTimeoutRef.current);
+          }
+          // Use the copied ref value to avoid stale closure issues
+          Object.values(currentTypingTimeouts).forEach(timeout => {
+            clearTimeout(timeout);
+          });
+        };
       } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
+        console.error('Error getting auth token:', error);
+        setError('Authentication failed - unable to get token');
       }
     };
 
-    setSocket(ws);
+    connectWebSocket();
 
     return () => {
       if (ws) {
-        ws.close();
+        ws.close(1000, 'Component unmounting');
       }
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      // Use the copied ref value to avoid stale closure issues
-      Object.values(currentTypingTimeouts).forEach(timeout => {
-        clearTimeout(timeout);
-      });
+      if (authenticationTimeout) {
+        clearTimeout(authenticationTimeout);
+      }
     };
   }, [user, teamIds, handleWebSocketMessage]);
 
   // Send message through WebSocket
   const sendMessage = useCallback((type, data) => {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
+      console.warn('WebSocket is not connected, cannot send message');
       setError('WebSocket is not connected');
-      return;
+      return false;
+    }
+
+    if (!isConnected) {
+      console.warn('WebSocket is not authenticated, cannot send message');
+      setError('WebSocket is not authenticated');
+      return false;
     }
 
     try {
@@ -132,11 +223,13 @@ export function useWebSocket(teamIds) {
         type,
         ...data
       }));
+      return true;
     } catch (error) {
       console.error('Error sending message:', error);
       setError('Failed to send message');
+      return false;
     }
-  }, [socket]);
+  }, [socket, isConnected]);
 
   // Send chat message
   const sendChatMessage = useCallback((teamId, content) => {
@@ -145,7 +238,12 @@ export function useWebSocket(teamIds) {
 
   // Update typing status
   const updateTypingStatus = useCallback((teamId, isTyping) => {
-    sendMessage('typing', { teamId, isTyping });
+    return sendMessage('typing', { teamId, isTyping });
+  }, [sendMessage]);
+
+  // Update presence status
+  const updatePresenceStatus = useCallback((status) => {
+    return sendMessage('presence_update', { status });
   }, [sendMessage]);
 
   return {
@@ -154,6 +252,8 @@ export function useWebSocket(teamIds) {
     teamPresence,
     typingUsers,
     sendChatMessage,
-    updateTypingStatus
+    updateTypingStatus,
+    updatePresenceStatus,
+    sendMessage
   };
 } 

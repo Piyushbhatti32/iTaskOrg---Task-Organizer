@@ -75,10 +75,14 @@ export async function POST(request) {
     const data = await request.json();
     const user = await getAuthenticatedUser(request);
     const leaderId = user?.uid;
-    const { name, description } = data;
+    const { name, description, members = [], customRoles = [] } = data;
 
     if (!leaderId) {
-      return NextResponse.json({ error: 'Leader ID is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    if (!user.email) {
+      return NextResponse.json({ error: 'User email is required' }, { status: 400 });
     }
 
     const errors = validateTeamData({ name, description });
@@ -86,17 +90,37 @@ export async function POST(request) {
       return NextResponse.json({ errors }, { status: 400 });
     }
 
+    // Create members object with the team creator as leader
+    const membersObject = {
+      [leaderId]: {
+        role: 'leader',
+        email: user.email,
+        name: user.displayName || user.email.split('@')[0],
+        joinedAt: FieldValue.serverTimestamp()
+      }
+    };
+
+    // Add other members to the team
+    members.forEach(member => {
+      // Generate a temporary ID for manually added members
+      const memberId = member.id || `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      membersObject[memberId] = {
+        role: member.role || 'member',
+        email: member.email,
+        name: member.name,
+        isManual: member.isManual || false,
+        joinedAt: FieldValue.serverTimestamp()
+      };
+    });
+
     const teamData = {
-      name,
-      description,
+      name: name.trim(),
+      description: description?.trim() || '',
       leaderId,
       tasks: [],
-      members: {
-        [leaderId]: {
-          role: 'leader',
-          joinedAt: FieldValue.serverTimestamp()
-        }
-      },
+      members: membersObject,
+      customRoles: customRoles || [], // Store custom roles defined by the leader
+      memberCount: Object.keys(membersObject).length,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp()
     };
@@ -104,13 +128,30 @@ export async function POST(request) {
     const teamsRef = adminDb.collection('teams');
     const docRef = await teamsRef.add(teamData);
 
-    return NextResponse.json({
+    // Return the created team with resolved timestamps
+    const createdTeam = {
       id: docRef.id,
-      ...teamData
-    });
+      ...teamData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    return NextResponse.json(createdTeam);
   } catch (error) {
     console.error('Error creating team:', error);
-    return NextResponse.json({ error: 'Failed to create team' }, { status: 500 });
+    console.error('Error stack:', error.stack);
+    console.error('Error name:', error.name);
+    console.error('Error code:', error.code);
+    
+    // Log the full error object for debugging
+    console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    
+    return NextResponse.json({ 
+      error: 'Failed to create team', 
+      details: error.message,
+      errorCode: error.code,
+      errorName: error.name
+    }, { status: 500 });
   }
 }
 

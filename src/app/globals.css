@@ -83,6 +83,11 @@ body {
   color: #171717 !important;
 }
 
+.dark .bg-white {
+  background-color: #111827 !important;
+  color: #fff !important;
+}
+
 .bg-black {
   background-color: #000 !important;
   color: #fff !important;
@@ -93,9 +98,40 @@ body {
   color: #171717 !important;
 }
 
+.dark .bg-gray-50 {
+  background-color: #374151 !important;
+  color: #fff !important;
+}
+
 .bg-gray-100 {
   background-color: #f3f4f6 !important;
   color: #171717 !important;
+}
+
+.dark .bg-gray-100 {
+  background-color: #4b5563 !important;
+  color: #fff !important;
+}
+
+/* Additional gray backgrounds for notification center */
+.bg-gray-800 {
+  background-color: #1f2937 !important;
+  color: #fff !important;
+}
+
+.dark .bg-gray-800 {
+  background-color: #1f2937 !important;
+  color: #fff !important;
+}
+
+.bg-gray-900 {
+  background-color: #111827 !important;
+  color: #fff !important;
+}
+
+.dark .bg-gray-900 {
+  background-color: #111827 !important;
+  color: #fff !important;
 }
 
 .bg-blue-600 {

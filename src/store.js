@@ -25,7 +25,8 @@ const initialState = {
   tasks: [],
   templates: [],
   groups: [],
-  members: [],
+      members: [],
+      teams: [],
   settings: {
     theme: 'system',
     accentColor: 'blue',
@@ -67,6 +68,7 @@ const ensureValidState = (state) => ({
   templates: Array.isArray(state?.templates) ? state.templates : [],
   groups: Array.isArray(state?.groups) ? state.groups : [],
   members: Array.isArray(state?.members) ? state.members : [],
+  teams: Array.isArray(state?.teams) ? state.teams : [],
   settings: { ...initialState.settings, ...(state?.settings || {}) },
   profile: { ...initialState.profile, ...(state?.profile || {}) }
 });
@@ -943,6 +945,117 @@ export const useStore = create(
         }
       },
 
+      // Team actions
+      loadTeams: async () => {
+        try {
+          const user = auth.currentUser;
+          if (!user) {
+            throw new Error('User must be authenticated to load teams');
+          }
+          
+          const token = await user.getIdToken();
+          const response = await fetch('/api/teams', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to load teams');
+          }
+          
+          console.log('Teams loaded successfully via API:', result.teams?.length || 0);
+          
+          set((state) => ({
+            teams: result.teams || []
+          }));
+          
+          return result.teams || [];
+        } catch (error) {
+          console.error('Error loading teams:', error);
+          throw error;
+        }
+      },
+
+      addTeam: (teamData) => set((state) => ({
+        teams: [...state.teams, teamData]
+      })),
+
+      updateTeam: async (updatedTeam) => {
+        try {
+          const user = auth.currentUser;
+          if (!user) {
+            throw new Error('User must be authenticated to update team');
+          }
+          
+          const token = await user.getIdToken();
+          const response = await fetch('/api/teams', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(updatedTeam)
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to update team');
+          }
+          
+          console.log('Team updated successfully via API:', result.id);
+          
+          // Update local state
+          set((state) => ({
+            teams: state.teams.map((team) =>
+              team.id === updatedTeam.id ? { ...team, ...result } : team
+            )
+          }));
+          
+          return result;
+        } catch (error) {
+          console.error('Error updating team:', error);
+          throw error;
+        }
+      },
+
+      deleteTeam: async (teamId) => {
+        try {
+          const user = auth.currentUser;
+          if (!user) {
+            throw new Error('User must be authenticated to delete team');
+          }
+          
+          const token = await user.getIdToken();
+          const response = await fetch(`/api/teams?id=${teamId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to delete team');
+          }
+          
+          console.log('Team deleted successfully via API:', teamId);
+          
+          // Update local state
+          set((state) => ({
+            teams: state.teams.filter((team) => team.id !== teamId)
+          }));
+        } catch (error) {
+          console.error('Error deleting team:', error);
+          throw error;
+        }
+      },
+
       // Reset action
       reset: () => set(initialState)
     }),
@@ -957,6 +1070,7 @@ export const useStore = create(
         templates: state.templates,
         groups: state.groups,
         members: state.members,
+        teams: state.teams,
         // Explicitly exclude tasks from persistence
         // tasks: [] // Never persist tasks
       }),
@@ -1092,3 +1206,11 @@ export const useTaskActions = () => {
     deleteSubtask
   }), [addTask, updateTask, deleteTask, toggleTaskCompletion, addSubtask, toggleSubtask, deleteSubtask]);
 };
+
+// Team selectors and hooks
+const selectTeams = (state) => state.teams;
+export const useTeams = () => useStore(selectTeams);
+export const useLoadTeams = () => useStore((state) => state.loadTeams);
+export const useAddTeam = () => useStore((state) => state.addTeam);
+export const useUpdateTeam = () => useStore((state) => state.updateTeam);
+export const useDeleteTeam = () => useStore((state) => state.deleteTeam);

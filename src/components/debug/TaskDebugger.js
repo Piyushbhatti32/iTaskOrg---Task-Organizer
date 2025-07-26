@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTasks, useStore } from '../../store';
 import { debugTaskState } from '../../utils/debug';
 import { syncUtilities, autoFixTaskSync } from '../../utils/sync';
@@ -38,9 +38,9 @@ const TaskDebugger = ({ enabled = process.env.NODE_ENV === 'development' }) => {
   }, []);
 
   // Define toggleVisibility function before it's used in useEffect
-  const toggleVisibility = () => {
+  const toggleVisibility = useCallback(() => {
     setVisible(!visible);
-  };
+  }, [visible]);
 
   // Handle keyboard shortcuts
   useEffect(() => {

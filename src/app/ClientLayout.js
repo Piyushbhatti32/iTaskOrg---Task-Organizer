@@ -22,6 +22,7 @@ const navLinks = [
   { href: '/team', label: 'Team', icon: '🤝' },
   { href: '/stats', label: 'Statistics', icon: '📊' },
   { href: '/completed', label: 'Completed', icon: '✅' },
+  { href: '/notifications', label: 'Notifications', icon: '🔔' },
   { href: '/help-desk', label: 'Help Desk', icon: '🎫' },
   { href: '/settings', label: 'Settings', icon: '⚙️' },
   { href: '/profile', label: 'Profile', icon: '👤' },
@@ -32,7 +33,7 @@ function UserProfile({ user }) {
   const { isDark } = useTheme();
   const profile = useProfile();
   
-  const displayName = profile.name || user.displayName || 'User';
+  const displayName = profile.name || user?.displayName || 'User';
   const avatarContent = useMemo(() => {
     if (!user) return <User className="w-5 h-5" />;
     if (profile.avatar) {
@@ -68,6 +69,7 @@ function UserProfile({ user }) {
     return displayName.charAt(0) || <User className="w-5 h-5" />;
   }, [user, profile.avatar, displayName]);
 
+  // Conditional rendering instead of early return
   if (!user) return null;
 
   return (
@@ -97,6 +99,7 @@ function NavigationLinks({ pathname, user }) {
   
   const adminLinks = [
     { href: '/admin/help-desk', label: 'Admin Help Desk', icon: '🛠️' },
+    { href: '/admin/announcements', label: 'Announcements', icon: '📢' },
   ];
   
   return (
@@ -156,12 +159,13 @@ function MobileHeader({ onMenuClick, user }) {
   const pathname = usePathname();
   const profile = useProfile();
   
-  const currentPage = navLinks.find(link => link.href === pathname);
-  const displayName = profile.name || user.displayName || 'User';
-  
+  // Early return after all hooks are called
   if (!user || pathname.startsWith('/login')) {
     return null;
   }
+  
+  const currentPage = navLinks.find(link => link.href === pathname);
+  const displayName = profile.name || user.displayName || 'User';
 
   return (
     <header className={`lg:hidden fixed top-0 left-0 right-0 z-50 ${isDark ? 'bg-gray-950/95 border-gray-800' : 'bg-white/95 border-gray-200'} backdrop-blur-sm border-b shadow-sm`}>
@@ -181,31 +185,38 @@ function MobileHeader({ onMenuClick, user }) {
           </div>
         </div>
         
-        <Link href="/profile" className="flex items-center">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white overflow-hidden">
-          {profile.avatar ? (
-            <Image 
-              src={profile.avatar} 
-              alt={displayName} 
-              width={32}
-              height={32}
-              className="w-full h-full object-cover"
-            />
-          ) : user.photoURL ? (
-            <Image 
-              src={user.photoURL} 
-              alt={displayName} 
-              width={32}
-              height={32}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <span className="text-sm font-medium">
-              {displayName.charAt(0) || <User className="w-4 h-4" />}
-            </span>
-          )}
+        <div className="flex items-center gap-3">
+          <NotificationCenter position="right" />
+          <Link href="/profile" className="flex items-center">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white overflow-hidden">
+              {profile.avatar ? (
+                <Image 
+                  src={profile.avatar} 
+                  alt={displayName} 
+                  width={32}
+                  height={32}
+                  className="w-full h-full object-cover"
+                />
+              ) : user.photoURL ? (
+                <Image 
+                  src={user.photoURL} 
+                  alt={displayName} 
+                  width={32}
+                  height={32}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                displayName.charAt(0) ? (
+                  <span className="text-sm font-medium">
+                    {displayName.charAt(0)}
+                  </span>
+                ) : (
+                  <User className="w-4 h-4" />
+                )
+              )}
+            </div>
+          </Link>
         </div>
-        </Link>
       </div>
     </header>
   );
@@ -218,6 +229,9 @@ function MobileNavOverlay({ isOpen, onClose, user }) {
   const { logout } = useAuth();
   const profile = useProfile();
   const router = useRouter();
+  
+  // Early return after all hooks are called
+  if (!isOpen) return null;
   
   const displayName = profile.name || user.displayName || 'User';
   
@@ -234,8 +248,6 @@ function MobileNavOverlay({ isOpen, onClose, user }) {
   const handleLinkClick = () => {
     onClose();
   };
-  
-  if (!isOpen) return null;
   
   return (
     <>
@@ -282,7 +294,11 @@ function MobileNavOverlay({ isOpen, onClose, user }) {
                 className="w-full h-full object-cover"
               />
             ) : (
-              displayName.charAt(0) || <User className="w-5 h-5" />
+              displayName.charAt(0) ? (
+                displayName.charAt(0)
+              ) : (
+                <User className="w-5 h-5" />
+              )
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -326,6 +342,11 @@ function DesktopNavigationSidebar() {
   const { isDark } = useTheme();
   const router = useRouter();
 
+  // Early return after all hooks are called
+  if (!user || pathname.startsWith('/login')) {
+    return null;
+  }
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -335,14 +356,13 @@ function DesktopNavigationSidebar() {
     }
   };
 
-  if (!user || pathname.startsWith('/login')) {
-    return null;
-  }
-
   return (
     <nav className={`hidden lg:flex w-64 ${isDark ? 'bg-gray-950 border-gray-800' : 'bg-white border-gray-200'} border-r shadow-sm fixed h-screen overflow-y-auto flex-col scrollbar-hide z-30`}>
       <div className={`p-4 border-b ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
-        <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">iTaskOrg</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">iTaskOrg</h1>
+          <NotificationCenter position="left" />
+        </div>
       </div>
       
       <UserProfile user={user} />
