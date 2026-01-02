@@ -4,15 +4,13 @@ import { useEffect, useState } from 'react';
 import ClientLayout from './ClientLayout';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { isMobileApp } from '@/lib/platform';
-import { initMobileAuth } from "@/lib/init-mobile-auth";
 
 export default function RootLayout({ children }) {
   const [initError, setInitError] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize Google Auth for mobile apps (only once)
+  // No initialization needed with Firebase redirect flow
   useEffect(() => {
-    initMobileAuth();
     setIsInitialized(true);
   }, []);
 

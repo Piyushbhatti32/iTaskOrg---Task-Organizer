@@ -19,7 +19,7 @@ import {
 
 import { getFirebaseAuth } from "@/lib/firebase-client";
 import { isMobileApp } from "@/lib/platform";
-import { signInWithGoogleMobile, signInWithGoogleWeb } from "@/lib/google-auth";
+import { googleSignIn as firebaseGoogleSignIn } from "@/lib/google-signin";
 import { useStore } from "../store";
 import { createOrUpdateUserProfile, getUserProfile } from "../utils/db";
 
@@ -281,14 +281,8 @@ export function AuthProvider({ children }) {
     setError(null);
 
     try {
-      let result;
-      if (isMobileApp) {
-        // Use native Capacitor Google Auth on mobile
-        result = await signInWithGoogleMobile();
-      } else {
-        // Use Firebase web flow on desktop
-        result = await signInWithGoogleWeb();
-      }
+      // Use unified Firebase flow for both mobile and web
+      const result = await firebaseGoogleSignIn();
 
       // ✅ User canceled → return null (not an error)
       if (result === null) {
