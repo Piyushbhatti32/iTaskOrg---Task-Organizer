@@ -7,6 +7,7 @@ import { Mail, Lock, Eye, EyeOff, User, CheckCircle, AlertCircle, ArrowRight, Sp
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from '../../contexts/ThemeContext';
+import { handleRedirectResult } from "../../lib/google-signin";
 
 // Enhanced Input Component
 function InputField({
@@ -489,6 +490,23 @@ export default function LoginPage() {
     router.replace(redirectTo);
     setRedirectAttempts(prev => prev + 1);
   }, [router, redirectAttempts]);
+
+  // Check for redirect result from mobile Google Sign-In
+  useEffect(() => {
+    const checkRedirectResult = async () => {
+      try {
+        const result = await handleRedirectResult();
+        if (result?.user) {
+          console.log('Redirect result authenticated user:', result.user.email);
+          window.location.href = '/tasks';
+        }
+      } catch (error) {
+        console.error('Error checking redirect result:', error);
+      }
+    };
+
+    checkRedirectResult();
+  }, []);
 
   useEffect(() => {
     // Debug logging

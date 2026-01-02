@@ -1,40 +1,29 @@
 // lib/google-signin.ts
-import { GoogleAuth } from "@codetrix-studio/capacitor-google-auth";
 import {
   GoogleAuthProvider,
-  signInWithCredential,
+  signInWithRedirect,
+  signInWithPopup,
+  getRedirectResult,
 } from "firebase/auth";
 import { getFirebaseAuth } from "../lib/firebase-client";
 import { isMobileApp } from "../lib/platform";
 
 export async function googleSignIn() {
   const auth = getFirebaseAuth();
+  const provider = new GoogleAuthProvider();
 
   try {
     if (isMobileApp) {
-      const result = await GoogleAuth.signIn();
-
-      // 🔥 USER CANCELED → SILENT EXIT
-      if (!result?.authentication?.idToken) {
-        return null;
-      }
-
-      const credential = GoogleAuthProvider.credential(
-        result.authentication.idToken
-      );
-
-      return await signInWithCredential(auth, credential);
+      await signInWithRedirect(auth, provider);
+      return null; // redirect happens
     }
 
-    // 🌐 Web fallback
-    const { signInWithPopup } = await import("firebase/auth");
-    return await signInWithPopup(auth, new GoogleAuthProvider());
-
+    return await signInWithPopup(auth, provider);
   } catch (err: any) {
     // USER CANCEL — NOT ERROR
     if (
       err?.message?.toLowerCase().includes("cancel") ||
-      err?.code === "user_cancelled"
+      err?.code === "auth/popup-closed-by-user"
     ) {
       return null;
     }
@@ -42,5 +31,15 @@ export async function googleSignIn() {
     // REAL ERROR
     console.error("Google Sign-In failed:", err);
     throw err;
+  }
+}
+
+export async function handleRedirectResult() {
+  const auth = getFirebaseAuth();
+  try {
+    return await getRedirectResult(auth);
+  } catch (err) {
+    console.error("Redirect result error:", err);
+    return null;
   }
 }
