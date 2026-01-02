@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from '../../contexts/ThemeContext';
 import { handleRedirectResult } from "../../lib/google-signin";
+import { initGoogleOneTap } from "@/lib/google-one-tap";
 
 // Enhanced Input Component
 function InputField({
@@ -457,6 +458,11 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [redirectAttempts, setRedirectAttempts] = useState(0);
   
+  useEffect(() => {
+        // Show One Tap automatically on mobile + web
+            initGoogleOneTap();
+              }, []);
+
   const { isDark } = useTheme();
   const {
     user,

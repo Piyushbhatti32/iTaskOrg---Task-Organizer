@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import ClientLayout from './ClientLayout';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { isMobileApp } from '@/lib/platform';
+import Script from "next/script";
 
 export default function RootLayout({ children }) {
   const [initError, setInitError] = useState(null);
@@ -57,6 +58,10 @@ export default function RootLayout({ children }) {
         <meta name="theme-color" content="#0F0F14" />
       </head>
       <body>
+        <Script
+              src="https://accounts.google.com/gsi/client"
+              strategy="beforeInteractive"              
+             />
         <ErrorBoundary>
           <ClientLayout>
             {children}
