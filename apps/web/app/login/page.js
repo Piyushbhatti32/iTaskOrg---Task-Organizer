@@ -8,7 +8,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from '../../contexts/ThemeContext';
 import { handleRedirectResult } from "../../lib/google-signin";
-import { initGoogleOneTap } from "@/lib/google-one-tap";
+import { SocialLogin } from '@capgo/capacitor-social-login';
+import { isMobileApp } from "../../lib/platform";
 
 // Enhanced Input Component
 function InputField({
@@ -459,9 +460,16 @@ export default function LoginPage() {
   const [redirectAttempts, setRedirectAttempts] = useState(0);
   
   useEffect(() => {
-        // Show One Tap automatically on mobile + web
-            initGoogleOneTap();
-              }, []);
+    if (isMobileApp) {
+      // Initialize SocialLogin for mobile
+      SocialLogin.initialize({
+        google: {
+          webClientId: '673324426943-avl4v9ubdas7a0u7igf7in03pdj1dkmg.apps.googleusercontent.com',
+        }
+      });
+    }
+    // One Tap is now handled in googleSignIn() for web
+  }, []);
 
   const { isDark } = useTheme();
   const {
@@ -497,21 +505,9 @@ export default function LoginPage() {
     setRedirectAttempts(prev => prev + 1);
   }, [router, redirectAttempts]);
 
-  // Check for redirect result from mobile Google Sign-In
+  // Check for redirect result from mobile Google Sign-In (legacy, not used with SocialLogin)
   useEffect(() => {
-    const checkRedirectResult = async () => {
-      try {
-        const result = await handleRedirectResult();
-        if (result?.user) {
-          console.log('Redirect result authenticated user:', result.user.email);
-          window.location.href = '/tasks';
-        }
-      } catch (error) {
-        console.error('Error checking redirect result:', error);
-      }
-    };
-
-    checkRedirectResult();
+    // Not needed with current implementation
   }, []);
 
   useEffect(() => {

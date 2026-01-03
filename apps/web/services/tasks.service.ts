@@ -3,21 +3,29 @@
  * Can be called from components via fetch() or directly from API routes
  */
 
-import { getFirestoreDb } from "../lib/firebase-client";
-import {
-  collection,
-  doc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-  serverTimestamp,
-} from "firebase/firestore";
+import { adminDb } from "../config/firebase-admin";
+import type { Firestore, DocumentReference } from "firebase-admin/firestore";
+
+// Helper to ensure we have a valid database instance
+function getDb(): Firestore {
+  if (!adminDb) {
+    throw new Error('Firebase Admin is not initialized. Check your environment variables.');
+  }
+  return adminDb;
+}
+
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  assignedTo: string;
+  status: "pending" | "in-progress" | "completed";
+  priority: "low" | "medium" | "high";
+  dueDate?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  [key: string]: any;
+}
 
 /**
  * Create a new task
@@ -30,14 +38,14 @@ export async function createTask(data: {
   priority?: "low" | "medium" | "high";
   dueDate?: string;
   [key: string]: any;
-}) {
-  const db = getFirestoreDb();
-  const taskRef = await addDoc(collection(db, "tasks"), {
+}): Promise<DocumentReference> {
+  const db = getDb();
+  const taskRef = await db.collection("tasks").add({
     ...data,
     status: data.status || "pending",
     priority: data.priority || "medium",
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
   });
   return taskRef;
 }
@@ -48,12 +56,12 @@ export async function createTask(data: {
 export async function updateTask(
   taskId: string,
   data: Record<string, any>
-) {
-  const db = getFirestoreDb();
-  const docRef = doc(db, "tasks", taskId);
-  await updateDoc(docRef, {
+): Promise<DocumentReference> {
+  const db = getDb();
+  const docRef = db.collection("tasks").doc(taskId);
+  await docRef.update({
     ...data,
-    updatedAt: serverTimestamp(),
+    updatedAt: new Date(),
   });
   return docRef;
 }
@@ -61,19 +69,19 @@ export async function updateTask(
 /**
  * Delete a task
  */
-export async function deleteTask(taskId: string) {
-  const db = getFirestoreDb();
-  await deleteDoc(doc(db, "tasks", taskId));
+export async function deleteTask(taskId: string): Promise<void> {
+  const db = getDb();
+  await db.collection("tasks").doc(taskId).delete();
 }
 
 /**
  * Get a single task
  */
-export async function getTask(taskId: string) {
-  const db = getFirestoreDb();
-  const docRef = doc(db, "tasks", taskId);
-  const docSnap = await getDoc(docRef);
-  return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+export async function getTask(taskId: string): Promise<Task | null> {
+  const db = getDb();
+  const docRef = db.collection("tasks").doc(taskId);
+  const docSnap = await docRef.get();
+  return docSnap.exists ? { id: docSnap.id, ...docSnap.data() } as Task : null;
 }
 
 /**
@@ -88,27 +96,23 @@ export async function getUserTasks(
     groupId?: string;
     limit?: number;
   } = {}
-) {
-  const db = getFirestoreDb();
+): Promise<Task[]> {
+  const db = getDb();
   const { status, priority, teamId, groupId, limit: queryLimit = 20 } = filters;
 
-  let q = query(
-    collection(db, "tasks"),
-    where("assignedTo", "==", userId),
-    orderBy("createdAt", "desc"),
-    limit(queryLimit)
-  );
+  let q = db.collection("tasks")
+    .where("assignedTo", "==", userId)
+    .orderBy("createdAt", "desc")
+    .limit(queryLimit);
 
   if (status) {
-    q = query(
-      collection(db, "tasks"),
-      where("assignedTo", "==", userId),
-      where("status", "==", status),
-      orderBy("createdAt", "desc"),
-      limit(queryLimit)
-    );
+    q = db.collection("tasks")
+      .where("assignedTo", "==", userId)
+      .where("status", "==", status)
+      .orderBy("createdAt", "desc")
+      .limit(queryLimit);
   }
 
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  const querySnapshot = await q.get();
+  return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Task));
 }

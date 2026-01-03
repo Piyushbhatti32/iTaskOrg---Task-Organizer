@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "514738590363",
+    "firebase_url": "https://itask-org-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "itask-org",
+    "storage_bucket": "itask-org.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:514738590363:android:ae8e742e263a7a505eec3e",
+        "android_client_info": {
+          "package_name": "com.itaskorg.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "514738590363-hvc18c1gmuj45r48h6vm3umra8pstp96.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.itaskorg.app",
+            "certificate_hash": "5335c5afc897d893f6b0e94273ccd79c988da2a8"
+          }
+        },
+        {
+          "client_id": "514738590363-50iarlr0qon24at6df0or5m9abeopbrn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDLwbnpJo3HerCgKbCq7_v9Xb20jd3dM6I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "514738590363-50iarlr0qon24at6df0or5m9abeopbrn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

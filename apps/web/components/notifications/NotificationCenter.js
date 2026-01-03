@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Bell, X, Check, CheckSquare, Users, UserPlus, Settings } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useRouter } from 'next/navigation';
 
 const getNotificationIcon = (type) => {
   switch (type) {
@@ -147,7 +148,7 @@ export default function NotificationCenter({ position = 'right' }) {
     
     // Handle notification link navigation
     if (notification.link) {
-      window.location.href = notification.link;
+      router.push(notification.link);
     }
   };
 

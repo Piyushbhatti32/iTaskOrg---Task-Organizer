@@ -13,7 +13,7 @@ export default function NotFound() {
         </div>
 
         <p className="text-slate-600 dark:text-slate-400 mb-6">
-          The page you're looking for doesn't exist or has been moved.
+          {`The page you're looking for doesn't exist or has been moved.`}
         </p>
 
         <Link

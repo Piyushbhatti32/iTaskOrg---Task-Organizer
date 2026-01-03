@@ -1,14 +1,17 @@
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
+import { initializeApp, getApps, cert, type App } from 'firebase-admin/app';
+import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { getAuth, type Auth } from 'firebase-admin/auth';
 
-let app;
-let adminDb;
-let adminAuth;
+let app: App | null = null;
+let adminDb: Firestore | null = null;
+let adminAuth: Auth | null = null;
 
 if (getApps().length === 0) {
   try {
-    let firebaseAdminConfig;
+    let firebaseAdminConfig: {
+      credential?: ReturnType<typeof cert>;
+      projectId?: string;
+    };
     
     // Check if we have service account credentials
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
@@ -40,8 +43,11 @@ if (getApps().length === 0) {
         client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL,
         universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN || 'googleapis.com'
       };
+      const filteredServiceAccount = Object.fromEntries(
+        Object.entries(serviceAccount).filter(([_, value]) => value !== undefined)
+      ) as Record<string, string>;
       firebaseAdminConfig = {
-        credential: cert(serviceAccount),
+        credential: cert(filteredServiceAccount),
         projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID,
       };
     } else {

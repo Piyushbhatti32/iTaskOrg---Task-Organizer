@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getFirebaseAuth } from "@/lib/firebase-client";
-import { getGroup, getTask, createTask } from '@/utils/db';
+import { adminAuth, adminDb } from "@/config/firebase-admin";
+import { getGroup, getTask } from '@/utils/db';
 
 /**
  * Share a task with a group
  * POST /api/groups/tasks/share
  */
-
-const auth = getFirebaseAuth();
 
 export async function POST(request) {
   try {
@@ -19,7 +17,7 @@ export async function POST(request) {
     }
 
     const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await auth.verifyIdToken(token);
+    const decodedToken = await adminAuth.verifyIdToken(token);
     const userId = decodedToken.uid;
 
     // Get group details
@@ -66,7 +64,11 @@ export async function POST(request) {
       attachments: task.attachments || []
     };
 
-    const sharedTaskRef = await createTask(sharedTaskData);
+    const sharedTaskRef = await adminDb.collection('tasks').add({
+      ...sharedTaskData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
 
     return NextResponse.json({
       id: sharedTaskRef.id,

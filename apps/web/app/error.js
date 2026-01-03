@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertCircle, RefreshCw, Home } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Error({ error, reset }) {
   return (
@@ -33,13 +34,13 @@ export default function Error({ error, reset }) {
             <RefreshCw className="w-4 h-4" />
             Try Again
           </button>
-          <a
+          <Link
             href="/"
             className="flex items-center justify-center gap-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-900 dark:text-slate-100 font-medium py-2 px-4 rounded transition-colors"
           >
             <Home className="w-4 h-4" />
             Go Home
-          </a>
+          </Link>
         </div>
       </div>
     </div>

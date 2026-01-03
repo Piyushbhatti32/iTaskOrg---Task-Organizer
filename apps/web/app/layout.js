@@ -1,40 +1,41 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import ClientLayout from './ClientLayout';
-import ErrorBoundary from '../components/ErrorBoundary';
-import { isMobileApp } from '@/lib/platform';
+import { useEffect, useState } from "react";
+import ClientLayout from "./ClientLayout";
+import ErrorBoundary from "../components/ErrorBoundary";
+import { isMobileApp } from "@/lib/platform";
 import Script from "next/script";
 
 export default function RootLayout({ children }) {
   const [initError, setInitError] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // No initialization needed with Firebase redirect flow
+  // Or if you need the effect for timing:
   useEffect(() => {
-    setIsInitialized(true);
+    const timer = setTimeout(() => setIsInitialized(true), 0);
+    return () => clearTimeout(timer);
   }, []);
 
   // ✅ Suppress console.error spam for user cancellations in development
   // This reduces Next.js dev overlay noise without hiding real errors
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'development') return;
+    if (process.env.NODE_ENV !== "development") return;
 
     const originalError = console.error;
     console.error = (...args) => {
-      const message = typeof args[0] === 'string' ? args[0] : '';
-      
+      const message = typeof args[0] === "string" ? args[0] : "";
+
       // Suppress user cancellation messages
-      const isCancellationError = 
-        message.includes('canceled') ||
-        message.includes('cancelled') ||
-        message.includes('user_cancelled') ||
-        message.includes('User canceled the sign-in flow');
-      
+      const isCancellationError =
+        message.includes("canceled") ||
+        message.includes("cancelled") ||
+        message.includes("user_cancelled") ||
+        message.includes("User canceled the sign-in flow");
+
       if (isCancellationError) {
         return;
       }
-      
+
       // Let other errors through
       originalError(...args);
     };
@@ -45,8 +46,8 @@ export default function RootLayout({ children }) {
   }, []);
 
   // If there's an initialization error, show error UI
-  if (initError && process.env.NODE_ENV === 'development') {
-    console.warn('App initialization warning:', initError);
+  if (initError && process.env.NODE_ENV === "development") {
+    console.warn("App initialization warning:", initError);
   }
 
   return (
@@ -54,18 +55,19 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="shortcut icon" href="/favicon.ico" />
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+        />
         <meta name="theme-color" content="#0F0F14" />
       </head>
       <body>
         <Script
-              src="https://accounts.google.com/gsi/client"
-              strategy="beforeInteractive"              
-             />
+          src="https://accounts.google.com/gsi/client"
+          strategy="beforeInteractive"
+        />
         <ErrorBoundary>
-          <ClientLayout>
-            {children}
-          </ClientLayout>
+          <ClientLayout>{children}</ClientLayout>
         </ErrorBoundary>
       </body>
     </html>

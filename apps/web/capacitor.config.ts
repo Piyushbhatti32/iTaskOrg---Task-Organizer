@@ -5,10 +5,15 @@ const config: CapacitorConfig = {
   appName: 'iTaskOrg',
   webDir: 'public',
   server: {
-    url: "http://192.168.31.41:3000", // https://i-task-org-task-organizer.vercel.app/
+    url: "https://itaskorg.vercel.app/",
     cleartext: true,
   },
   plugins: {
+    SocialLogin: {
+      google: {
+        webClientId: '514738590363-50iarlr0qon24at6df0or5m9abeopbrn.apps.googleusercontent.com',
+      },
+    },
     SplashScreen: {
       launchShowDuration: 1500,
       launchAutoHide: true,

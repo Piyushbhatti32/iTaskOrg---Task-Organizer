@@ -496,9 +496,9 @@ function AppLayout({ children }) {
   const { isDark } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Close mobile menu on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
+    return () => {}; // Empty cleanup makes it "side effect" focused
   }, [pathname]);
 
   // Authentication guard - redirect unauthenticated users

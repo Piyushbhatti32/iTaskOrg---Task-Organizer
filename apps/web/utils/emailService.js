@@ -93,10 +93,10 @@ export async function sendNewTicketNotificationToAdmins(ticketData) {
         
         <!-- Action Button -->
         <div style="text-align: center; margin-bottom: 25px;">
-          <a href="${getTicketUrl(ticketNumber)}" 
+          <Link href="${getTicketUrl(ticketNumber)}" 
              style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
             🔍 View Ticket
-          </a>
+          </Link>
         </div>
         
         <!-- Footer -->
@@ -188,10 +188,10 @@ export async function sendTicketStatusUpdateToUser(userEmail, ticketData) {
         
         <!-- Action Button -->
         <div style="text-align: center; margin-bottom: 25px;">
-          <a href="${getTicketUrl(ticketNumber)}" 
+          <Link href="${getTicketUrl(ticketNumber)}" 
              style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
             🔍 View Ticket
-          </a>
+          </Link>
         </div>
         
         <!-- Footer -->

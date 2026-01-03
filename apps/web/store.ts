@@ -19,16 +19,184 @@ import {
   getUserProfile
 } from './utils/db';
 import { useMemo } from 'react';
-import { getFirebaseAuth } from "@/lib/firebase-client";
+import { getFirebaseAuth } from "./lib/firebase-client";
+
+// TypeScript interfaces
+interface Subtask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  completed: boolean;
+  completedAt?: string;
+  priority: 'low' | 'medium' | 'high';
+  dueDate?: string;
+  subtasks?: Subtask[];
+  completedPomodoros?: number;
+  userId?: string;
+}
+
+interface Template {
+  id: string;
+  name: string;
+  description?: string;
+  taskTitle: string;
+  priority: 'low' | 'medium' | 'high';
+  createdAt: string;
+  userId?: string;
+}
+
+interface Settings {
+  theme: string;
+  accentColor: string;
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  soundEnabled: boolean;
+  focusDuration: number;
+  shortBreakDuration: number;
+  longBreakDuration: number;
+  sessionsBeforeLongBreak: number;
+}
+
+interface Profile {
+  name: string;
+  email: string;
+  bio?: string;
+  timezone: string;
+  avatar?: string;
+  joinDate?: string;
+  lastSignIn?: string;
+  emailVerified: boolean;
+  providerId: string;
+  streak: number;
+  level: string;
+  stats: {
+    tasksCompleted: number;
+    totalTasks: number;
+    completionRate: number;
+    weeklyProgress: number[];
+    monthlyProgress: number[];
+  };
+}
+
+interface Group {
+  id: string;
+  name: string;
+  description?: string;
+  members: string[];
+  tasks: string[];
+  createdAt: string;
+}
+
+interface Member {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  assignedTasks: string[];
+  joinedAt: string;
+}
+
+interface Team {
+  id: string;
+  name?: string;
+  description?: string;
+  members?: string[];
+  createdAt?: string;
+  // Add more fields as needed
+}
+
+interface StoreState {
+  tasks: Task[];
+  templates: Template[];
+  groups: Group[];
+  members: Member[];
+  teams: Team[];
+  settings: Settings;
+  profile: Profile;
+}
+
+interface StoreActions {
+  // Task actions
+  addTask: (taskData: Omit<Task, 'id'>) => Promise<Task>;
+  updateTask: (updatedTask: Task) => Promise<Task>;
+  deleteTask: (taskId: string) => Promise<void>;
+  toggleTaskCompletion: (taskId: string) => Promise<void>;
+  addSubtask: (taskId: string, subtaskTitle: string) => Promise<void>;
+  toggleSubtask: (taskId: string, subtaskId: string) => Promise<void>;
+  deleteSubtask: (taskId: string, subtaskId: string) => Promise<void>;
+
+  // Template actions
+  addTemplate: (userId: string, templateData: Omit<Template, 'id' | 'createdAt' | 'userId'>) => Promise<Template>;
+  updateTemplate: (updatedTemplate: Template) => Promise<Template>;
+  deleteTemplate: (templateId: string) => Promise<void>;
+
+  // Settings actions
+  updateSettings: (userId: string, newSettings: Partial<Settings>) => Promise<void>;
+
+  // Profile actions
+  updateProfile: (newProfile: Partial<Profile>) => void;
+  updateProfileAsync: (userId: string, newProfile: Partial<Profile>) => Promise<void>;
+
+  // Group actions
+  addGroup: (groupData: Omit<Group, 'id' | 'createdAt'>) => void;
+  updateGroup: (updatedGroup: Group) => void;
+  deleteGroup: (groupId: string) => void;
+  addMemberToGroup: (groupId: string, memberId: string) => void;
+  removeMember: (groupId: string, memberId: string) => void;
+  addTaskToGroup: (groupId: string, taskId: string) => void;
+  removeTaskFromGroup: (groupId: string, taskId: string) => void;
+
+  // Member actions
+  addMember: (memberData: Omit<Member, 'id' | 'joinedAt'>) => void;
+  updateMember: (updatedMember: Member) => void;
+  deleteMember: (memberId: string) => void;
+  assignTask: (memberId: string, taskId: string) => void;
+  unassignTask: (memberId: string, taskId: string) => void;
+
+  // Calendar actions
+  getTasksByDate: (date: Date) => Task[];
+
+  // Focus/Pomodoro actions
+  updateFocusSettings: (settings: Partial<Pick<Settings, 'focusDuration' | 'shortBreakDuration' | 'longBreakDuration' | 'sessionsBeforeLongBreak'>>) => void;
+  updateTaskPomodoros: (taskId: string, count: number) => void;
+
+  // Stats actions
+  getTaskStats: () => { total: number; completed: number; pending: number; completionRate: number };
+  getProductivityTrends: () => Record<string, number>;
+
+  // Load actions
+  loadTasks: (userId: string) => Promise<void>;
+  loadTemplates: (userId: string) => Promise<void>;
+  loadSettings: (userId: string) => Promise<void>;
+  loadProfile: (userId: string) => Promise<void>;
+  loadAllUserData: (userId: string) => Promise<void>;
+
+  // Team actions
+  loadTeams: () => Promise<Team[]>;
+  addTeam: (teamData: Team) => void;
+  updateTeam: (updatedTeam: Team) => Promise<Team>;
+  deleteTeam: (teamId: string) => Promise<void>;
+
+  // Reset action
+  reset: () => void;
+}
+
+type Store = StoreState & StoreActions;
 
 const auth = getFirebaseAuth();
 
-const initialState = {
+const initialState: StoreState = {
   tasks: [],
   templates: [],
   groups: [],
-      members: [],
-      teams: [],
+  members: [],
+  teams: [],
   settings: {
     theme: 'system',
     accentColor: 'blue',
@@ -63,7 +231,7 @@ const initialState = {
 };
 
 // Ensure state has valid arrays and objects
-const ensureValidState = (state) => ({
+const ensureValidState = (state: any): StoreState => ({
   ...initialState,
   ...state,
   tasks: Array.isArray(state?.tasks) ? state.tasks : [],
@@ -76,19 +244,19 @@ const ensureValidState = (state) => ({
 });
 
 // Selectors - memoized to prevent infinite loops
-const selectTasks = (state) => state.tasks;
-const selectSettings = (state) => state.settings;
-const selectProfile = (state) => state.profile;
-const selectTemplates = (state) => state.templates;
+const selectTasks = (state: Store) => state.tasks;
+const selectSettings = (state: Store) => state.settings;
+const selectProfile = (state: Store) => state.profile;
+const selectTemplates = (state: Store) => state.templates;
 
 // Create a stable selector for uncompleted tasks
-const selectUncompletedTasks = (state) => {
+const selectUncompletedTasks = (state: Store) => {
   const tasks = state.tasks;
   // Use a stable reference if possible
   return tasks.filter(task => !task.completed);
 };
 
-export const useStore = create(
+export const useStore = create<Store>()(
   persist(
     (set, get) => ({
       ...initialState,
@@ -96,7 +264,7 @@ export const useStore = create(
       // Task actions
       addTask: async (taskData) => {
         // Wait for auth state to be ready
-        await new Promise((resolve) => {
+        await new Promise<void>((resolve) => {
           if (auth.currentUser) {
             resolve();
           } else {
@@ -144,14 +312,14 @@ export const useStore = create(
             throw new Error(result.error || 'Failed to create task');
           }
           
-          console.log('Task created successfully via API:', result.task.id);
+          console.log('Task created successfully via API:', result.data.id);
           
           // Update local state with the created task
           set((state) => ({
-            tasks: [...state.tasks, result.task]
+            tasks: [...state.tasks, result.data]
           }));
           
-          return result.task;
+          return result.data;
         } catch (error) {
           console.error('Error creating task:', error);
           throw error;
@@ -179,16 +347,16 @@ export const useStore = create(
             throw new Error(result.error || 'Failed to update task');
           }
           
-          console.log('Task updated successfully via API:', result.task.id);
+          console.log('Task updated successfully via API:', result.data.id);
           
           // Update local state with the updated task
           set((state) => ({
             tasks: state.tasks.map((task) =>
-              task.id === updatedTask.id ? result.task : task
+              task.id === updatedTask.id ? result.data : task
             )
           }));
           
-          return result.task;
+          return result.data;
         } catch (error) {
           console.error('Error updating task:', error);
           throw error;
@@ -273,10 +441,10 @@ export const useStore = create(
         
         console.log('✅ Task found:', { id: task.id, title: task.title, completed: task.completed });
         
-        const updatedTask = {
+        const updatedTask: Task = {
           ...task,
           completed: !task.completed,
-          completedAt: !task.completed ? new Date().toISOString() : null
+          completedAt: !task.completed ? new Date().toISOString() : undefined
         };
         
         console.log('📝 Updated task data:', {
@@ -315,7 +483,7 @@ export const useStore = create(
           // Update local state with the updated task
           set((state) => {
             const newTasks = state.tasks.map((t) =>
-              t.id === taskId ? result.task : t
+              t.id === taskId ? result.data : t
             );
             console.log('📊 Updated local state with', newTasks.length, 'tasks');
             return { tasks: newTasks };
@@ -323,8 +491,8 @@ export const useStore = create(
         } catch (error) {
           console.error('❌ Error toggling task completion:', error);
           console.error('🔍 Error details:', {
-            message: error.message,
-            stack: error.stack,
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
             taskId,
             taskExists: !!task
           });
@@ -337,7 +505,7 @@ export const useStore = create(
         const task = state.tasks.find(t => t.id === taskId);
         if (!task) return;
         
-        const updatedTask = {
+        const updatedTask: Task = {
           ...task,
           subtasks: [
             ...(task.subtasks || []),
@@ -370,7 +538,7 @@ export const useStore = create(
           // Update local state with the updated task
           set((state) => ({
             tasks: state.tasks.map((t) =>
-              t.id === taskId ? result.task : t
+              t.id === taskId ? result.data : t
             )
           }));
         } catch (error) {
@@ -384,9 +552,9 @@ export const useStore = create(
         const task = state.tasks.find(t => t.id === taskId);
         if (!task) return;
         
-        const updatedTask = {
+        const updatedTask: Task = {
           ...task,
-          subtasks: task.subtasks.map((st) =>
+          subtasks: task.subtasks!.map((st) =>
             st.id === subtaskId ? { ...st, completed: !st.completed } : st
           )
         };
@@ -412,7 +580,7 @@ export const useStore = create(
           // Update local state with the updated task
           set((state) => ({
             tasks: state.tasks.map((t) =>
-              t.id === taskId ? result.task : t
+              t.id === taskId ? result.data : t
             )
           }));
         } catch (error) {
@@ -426,9 +594,9 @@ export const useStore = create(
         const task = state.tasks.find(t => t.id === taskId);
         if (!task) return;
         
-        const updatedTask = {
+        const updatedTask: Task = {
           ...task,
-          subtasks: task.subtasks.filter((st) => st.id !== subtaskId)
+          subtasks: task.subtasks!.filter((st) => st.id !== subtaskId)
         };
         
         try {
@@ -452,7 +620,7 @@ export const useStore = create(
           // Update local state with the updated task
           set((state) => ({
             tasks: state.tasks.map((t) =>
-              t.id === taskId ? result.task : t
+              t.id === taskId ? result.data : t
             )
           }));
         } catch (error) {
@@ -463,13 +631,14 @@ export const useStore = create(
 
       // Template actions
       addTemplate: async (userId, templateData) => {
-        const newTemplate = {
+        const newTemplate: Template = {
           id: uuidv4(),
           name: templateData.name,
           description: templateData.description || '',
           taskTitle: templateData.taskTitle,
           priority: templateData.priority || 'medium',
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          userId
         };
         
         try {
@@ -639,10 +808,7 @@ export const useStore = create(
           ...state.groups,
           {
             id: uuidv4(),
-            name: groupData.name,
             description: groupData.description || '',
-            members: groupData.members || [],
-            tasks: groupData.tasks || [],
             createdAt: new Date().toISOString(),
             ...groupData
           }
@@ -697,10 +863,6 @@ export const useStore = create(
           ...state.members,
           {
             id: uuidv4(),
-            name: memberData.name,
-            email: memberData.email,
-            role: memberData.role || 'member',
-            assignedTasks: [],
             joinedAt: new Date().toISOString(),
             ...memberData
           }
@@ -803,14 +965,14 @@ export const useStore = create(
           })
           .reduce((acc, task) => {
             try {
-              const date = new Date(task.completedAt).toDateString();
+              const date = new Date(task.completedAt!).toDateString();
               acc[date] = (acc[date] || 0) + 1;
               return acc;
             } catch (error) {
               console.warn('Error processing date for task:', task.id, task.completedAt);
               return acc;
             }
-          }, {});
+          }, {} as Record<string, number>);
       },
 
       // Load tasks from API route (Admin SDK)
@@ -1117,7 +1279,7 @@ export const useUpdateTemplate = () => useStore((state) => state.updateTemplate)
 export const useDeleteTemplate = () => useStore((state) => state.deleteTemplate);
 
 // Group selectors and hooks
-const selectGroups = (state) => state.groups;
+const selectGroups = (state: Store) => state.groups;
 export const useGroups = () => useStore(selectGroups);
 export const useAddGroup = () => useStore((state) => state.addGroup);
 export const useUpdateGroup = () => useStore((state) => state.updateGroup);
@@ -1128,7 +1290,7 @@ export const useAddTaskToGroup = () => useStore((state) => state.addTaskToGroup)
 export const useRemoveTaskFromGroup = () => useStore((state) => state.removeTaskFromGroup);
 
 // Member selectors and hooks
-const selectMembers = (state) => state.members;
+const selectMembers = (state: Store) => state.members;
 export const useMembers = () => useStore(selectMembers);
 export const useAddMember = () => useStore((state) => state.addMember);
 export const useUpdateMember = () => useStore((state) => state.updateMember);
@@ -1137,7 +1299,7 @@ export const useAssignTask = () => useStore((state) => state.assignTask);
 export const useUnassignTask = () => useStore((state) => state.unassignTask);
 
 // Calendar hooks
-export const useTasksByDate = (date) => {
+export const useTasksByDate = (date: Date) => {
   const getTasksByDate = useStore((state) => state.getTasksByDate);
   return useMemo(() => getTasksByDate(date), [getTasksByDate, date]);
 };
@@ -1210,7 +1372,7 @@ export const useTaskActions = () => {
 };
 
 // Team selectors and hooks
-const selectTeams = (state) => state.teams;
+const selectTeams = (state: Store) => state.teams;
 export const useTeams = () => useStore(selectTeams);
 export const useLoadTeams = () => useStore((state) => state.loadTeams);
 export const useAddTeam = () => useStore((state) => state.addTeam);
